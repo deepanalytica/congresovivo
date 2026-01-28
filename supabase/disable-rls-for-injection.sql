@@ -12,3 +12,9 @@ ALTER TABLE votes DISABLE ROW LEVEL SECURITY;
 
 -- Disable RLS on vote_roll_call table
 ALTER TABLE vote_roll_call DISABLE ROW LEVEL SECURITY;
+
+-- Disable RLS on committees table
+ALTER TABLE committees DISABLE ROW LEVEL SECURITY;
+
+-- Disable RLS on committee_members table
+ALTER TABLE committee_members DISABLE ROW LEVEL SECURITY;
