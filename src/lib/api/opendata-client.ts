@@ -3,6 +3,8 @@
  * Connects to opendata.camara.cl and tramitacion.senado.cl
  */
 
+import { DOMParser } from 'xmldom';
+
 const CAMARA_BASE_URL = 'https://opendata.camara.cl';
 const SENADO_BASE_URL = 'https://tramitacion.senado.cl/wspublico';
 
@@ -39,19 +41,23 @@ export async function getSenadores() {
     const url = `${SENADO_BASE_URL}/senadores_vigentes.php`;
     const doc = await fetchXML(url);
 
-    const senadores = Array.from(doc.querySelectorAll('SENADOR')).map(senador => {
-        const getId = (tag: string) => senador.querySelector(tag)?.textContent || '';
+    const senadoresNodes = doc.getElementsByTagName('senador');
+    const senadores = Array.from(senadoresNodes).map(senador => {
+        const getTag = (tag: string) => {
+            const elements = senador.getElementsByTagName(tag);
+            return elements.length > 0 ? elements[0].textContent || '' : '';
+        };
 
         return {
-            id: getId('ID'),
-            nombre: getId('NOMBRE'),
-            apellidoPaterno: getId('APELLIDO_PATERNO'),
-            apellidoMaterno: getId('APELLIDO_MATERNO'),
-            partido: getId('PARTIDO'),
-            region: getId('REGION'),
-            circunscripcion: getId('CIRCUNSCRIPCION'),
-            email: getId('EMAIL'),
-            telefono: getId('TELEFONO'),
+            id: getTag('PARLID'),
+            nombre: getTag('PARLNOMBRE'),
+            apellidoPaterno: getTag('PARLAPELLIDOPATERNO'),
+            apellidoMaterno: getTag('PARLAPELLIDOMATERNO'),
+            partido: getTag('PARTIDO'),
+            region: getTag('REGION'),
+            circunscripcion: getTag('CIRCUNSCRIPCION'),
+            email: getTag('EMAIL'),
+            telefono: getTag('FONO'),
         };
     });
 
@@ -88,18 +94,22 @@ export async function getDiputados() {
     const xmlText = await response.text();
     const doc = parseXML(xmlText);
 
-    const diputados = Array.from(doc.querySelectorAll('Diputado')).map(diputado => {
-        const getId = (tag: string) => diputado.querySelector(tag)?.textContent || '';
+    const diputadosNodes = doc.getElementsByTagName('Diputado');
+    const diputados = Array.from(diputadosNodes).map(diputado => {
+        const getTag = (tag: string) => {
+            const elements = diputado.getElementsByTagName(tag);
+            return elements.length > 0 ? elements[0].textContent || '' : '';
+        };
 
         return {
-            id: getId('Id'),
-            nombre: getId('Nombre'),
-            apellidoPaterno: getId('ApellidoPaterno'),
-            apellidoMaterno: getId('ApellidoMaterno'),
-            partido: getId('Partido'),
-            region: getId('Region'),
-            distrito: getId('Distrito'),
-            email: getId('Email'),
+            id: getTag('Id'),
+            nombre: getTag('Nombre'),
+            apellidoPaterno: getTag('ApellidoPaterno'),
+            apellidoMaterno: getTag('ApellidoMaterno'),
+            partido: getTag('Partido'),
+            region: getTag('Region'),
+            distrito: getTag('Distrito'),
+            email: getTag('Email'),
         };
     });
 
@@ -138,19 +148,23 @@ export async function getProyectosLey() {
     const xmlText = await response.text();
     const doc = parseXML(xmlText);
 
-    const proyectos = Array.from(doc.querySelectorAll('Proyecto')).map(proyecto => {
-        const getId = (tag: string) => proyecto.querySelector(tag)?.textContent || '';
+    const proyectosNodes = doc.getElementsByTagName('Proyecto');
+    const proyectos = Array.from(proyectosNodes).map(proyecto => {
+        const getTag = (tag: string) => {
+            const elements = proyecto.getElementsByTagName(tag);
+            return elements.length > 0 ? elements[0].textContent || '' : '';
+        };
 
         return {
-            id: getId('Id'),
-            boletin: getId('Boletin'),
-            titulo: getId('Titulo'),
-            fechaIngreso: getId('FechaIngreso'),
-            etapa: getId('Etapa'),
-            subEtapa: getId('SubEtapa'),
-            urgencia: getId('Urgencia'),
-            camara: getId('Camara'),
-            iniciativa: getId('Iniciativa'),
+            id: getTag('Id'),
+            boletin: getTag('Boletin'),
+            titulo: getTag('Titulo'),
+            fechaIngreso: getTag('FechaIngreso'),
+            etapa: getTag('Etapa'),
+            subEtapa: getTag('SubEtapa'),
+            urgencia: getTag('Urgencia'),
+            camara: getTag('Camara'),
+            iniciativa: getTag('Iniciativa'),
         };
     });
 
@@ -164,15 +178,19 @@ export async function getTramitacion(boletin: string) {
     const url = `${SENADO_BASE_URL}/tramitacion.php?boletin=${boletin}`;
     const doc = await fetchXML(url);
 
-    const tramites = Array.from(doc.querySelectorAll('TRAMITE')).map(tramite => {
-        const getId = (tag: string) => tramite.querySelector(tag)?.textContent || '';
+    const tramitesNodes = doc.getElementsByTagName('TRAMITE');
+    const tramites = Array.from(tramitesNodes).map(tramite => {
+        const getTag = (tag: string) => {
+            const elements = tramite.getElementsByTagName(tag);
+            return elements.length > 0 ? elements[0].textContent || '' : '';
+        };
 
         return {
-            fecha: getId('FECHA'),
-            camara: getId('CAMARA'),
-            etapa: getId('ETAPA'),
-            descripcion: getId('DESCRIPCION'),
-            sesion: getId('SESION'),
+            fecha: getTag('FECHA'),
+            camara: getTag('CAMARA'),
+            etapa: getTag('ETAPA'),
+            descripcion: getTag('DESCRIPCION'),
+            sesion: getTag('SESION'),
         };
     });
 

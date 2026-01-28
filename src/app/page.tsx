@@ -78,16 +78,18 @@ export default function HomePage() {
 
             {/* Sidebar Navigation */}
             <aside className="hidden md:flex flex-col w-24 h-screen sticky top-0 border-r border-white/5 bg-black/20 backdrop-blur-xl z-40 items-center py-8 gap-8">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)]">
-                    <Zap className="text-white w-6 h-6 fill-current" />
-                </div>
+                <Link href="/">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)] cursor-pointer">
+                        <Zap className="text-white w-6 h-6 fill-current" />
+                    </div>
+                </Link>
 
                 <nav className="flex-1 flex flex-col gap-6 w-full px-4">
-                    <NavIcon icon={<BarChart3 />} label="Radar" active />
-                    <NavIcon icon={<FileText />} label="Proyectos" />
-                    <NavIcon icon={<Vote />} label="Votos" />
-                    <NavIcon icon={<Map />} label="Mapa" />
-                    <NavIcon icon={<Users />} label="Comisiones" />
+                    <NavIcon href="/" icon={<BarChart3 />} label="Radar" active />
+                    <NavIcon href="/proyectos" icon={<FileText />} label="Proyectos" />
+                    <NavIcon href="/votos" icon={<Vote />} label="Votos" />
+                    <NavIcon href="/mapa" icon={<Map />} label="Mapa" />
+                    <NavIcon href="/comisiones" icon={<Users />} label="Comisiones" />
                 </nav>
 
                 <div className="flex flex-col gap-4">
@@ -239,14 +241,14 @@ export default function HomePage() {
     )
 }
 
-function NavIcon({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
+function NavIcon({ icon, label, active = false, href = "/" }: { icon: React.ReactNode, label: string, active?: boolean, href?: string }) {
     return (
-        <div className={`flex flex-col items-center gap-1 group cursor-pointer ${active ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}>
+        <Link href={href} className={`flex flex-col items-center gap-1 group cursor-pointer ${active ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}>
             <div className={`p-3 rounded-xl transition-all duration-300 ${active ? 'bg-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'hover:bg-white/10 text-white'}`}>
                 {React.cloneElement(icon as React.ReactElement, { size: 24 })}
             </div>
             <span className="text-[10px] font-medium tracking-wide uppercase">{label}</span>
-        </div>
+        </Link>
     )
 }
 

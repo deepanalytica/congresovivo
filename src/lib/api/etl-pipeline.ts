@@ -5,6 +5,7 @@
 
 import { getSenadores, getDiputados, getProyectosLey } from './opendata-client';
 import { partyToIdeology } from '@/lib/design-tokens';
+import { getServerSupabase } from '@/lib/supabase/client';
 
 /**
  * ETL Job: Sync Parliamentarians
@@ -32,7 +33,7 @@ export async function syncParlamentarians() {
                 apellido_materno: s.apellidoMaterno,
                 partido: s.partido,
                 ideologia: partyToIdeology[s.partido] || 'independent',
-                camara: 'senado',
+                camara: 'senado' as const,
                 region: s.region,
                 circunscripcion: s.circunscripcion,
                 email: s.email,
@@ -48,7 +49,7 @@ export async function syncParlamentarians() {
                 apellido_materno: d.apellidoMaterno,
                 partido: d.partido,
                 ideologia: partyToIdeology[d.partido] || 'independent',
-                camara: 'camara',
+                camara: 'camara' as const,
                 region: d.region,
                 distrito: d.distrito,
                 email: d.email,
@@ -58,11 +59,31 @@ export async function syncParlamentarians() {
         ];
 
         // 3. LOAD: Store in Supabase
-        // TODO: Implement Supabase client
-        console.log(`💾 Would store ${allParlamentarians.length} parliamentarians in DB`);
+        const supabase = getServerSupabase();
 
-        // For now, return transformed data
-        return allParlamentarians;
+        console.log(`💾 Storing ${allParlamentarians.length} parliamentarians in database...`);
+
+        const { data, error } = await supabase
+            .from('parliamentarians')
+            .upsert(allParlamentarians, {
+                onConflict: 'external_id',
+                ignoreDuplicates: false
+            })
+            .select();
+
+        if (error) {
+            console.error('❌ Database error:', error);
+            throw error;
+        }
+
+        console.log(`✅ Successfully synced ${data?.length || allParlamentarians.length} parliamentarians`);
+
+        return {
+            success: true,
+            count: data?.length || allParlamentarians.length,
+            senators: senadores.length,
+            deputies: diputados.length
+        };
 
     } catch (error) {
         console.error('❌ ETL Error (Parliamentarians):', error);
@@ -110,7 +131,7 @@ export async function syncBills() {
                 boletin: p.boletin,
                 titulo: p.titulo,
                 estado: stageMap[p.etapa] || 'ingreso',
-                camara_origen: p.camara.toLowerCase() === 'senado' ? 'senado' : 'camara',
+                camara_origen: (p.camara.toLowerCase() === 'senado' ? 'senado' : 'camara') as 'senado' | 'camara',
                 urgencia: urgencyMap[p.urgencia] || 'sin',
                 fecha_ingreso: p.fechaIngreso,
                 fecha_ultima_modificacion: p.fechaIngreso, // Will be updated from tramitacion
@@ -120,10 +141,30 @@ export async function syncBills() {
             };
         });
 
-        // 3. LOAD
-        console.log(`💾 Would store ${bills.length} bills in DB`);
+        // 3. LOAD: Store in Supabase
+        const supabase = getServerSupabase();
 
-        return bills;
+        console.log(`💾 Storing ${bills.length} bills in database...`);
+
+        const { data, error } = await supabase
+            .from('bills')
+            .upsert(bills, {
+                onConflict: 'boletin',
+                ignoreDuplicates: false
+            })
+            .select();
+
+        if (error) {
+            console.error('❌ Database error:', error);
+            throw error;
+        }
+
+        console.log(`✅ Successfully synced ${data?.length || bills.length} bills`);
+
+        return {
+            success: true,
+            count: data?.length || bills.length
+        };
 
     } catch (error) {
         console.error('❌ ETL Error (Bills):', error);
@@ -144,15 +185,15 @@ export async function runFullSync() {
     };
 
     try {
-        const parl = await syncParlamentarians();
-        results.parliamentarians = parl.length;
+        const parlResult = await syncParlamentarians();
+        results.parliamentarians = parlResult.count;
     } catch (error) {
         results.errors.push(`Parliamentarians sync failed: ${error}`);
     }
 
     try {
-        const bills = await syncBills();
-        results.bills = bills.length;
+        const billsResult = await syncBills();
+        results.bills = billsResult.count;
     } catch (error) {
         results.errors.push(`Bills sync failed: ${error}`);
     }
