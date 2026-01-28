@@ -64,7 +64,16 @@ export default function HomePage() {
 
     // Mock activities for now
     const mockActivities = [
-        { id: '1', tipo: 'aprobacion' as const, titulo: 'Proyecto sobre IA aprobado en Sala', cuando: new Date() },
+        {
+            id: '1',
+            tipo: 'aprobacion' as const,
+            titulo: 'Proyecto sobre IA aprobado en Sala',
+            fecha: new Date(),
+            cuando: new Date(),
+            descripcion: 'Proyecto aprobado en sala',
+            entidad: 'Senado',
+            relevancia: 'alta' as const
+        },
     ];
 
     return (
