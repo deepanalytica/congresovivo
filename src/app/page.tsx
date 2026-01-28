@@ -66,12 +66,15 @@ export default function HomePage() {
     const mockActivities = [
         {
             id: '1',
-            tipo: 'aprobacion' as const,
+            tipo: 'bill_update' as const,
             titulo: 'Proyecto sobre IA aprobado en Sala',
             fecha: new Date(),
-            cuando: new Date(),
             descripcion: 'Proyecto aprobado en sala',
-            entidad: 'Senado',
+            entidad: {
+                tipo: 'bill' as const,
+                id: 'bill-1',
+                nombre: 'Proyecto sobre IA'
+            },
             relevancia: 'alta' as const
         },
     ];
