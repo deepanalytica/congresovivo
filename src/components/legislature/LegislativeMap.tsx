@@ -1,11 +1,8 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-
-// Set your Mapbox access token here
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
+import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface RegionData {
     region: string;
@@ -23,39 +20,45 @@ interface LegislativeMapProps {
 
 export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<mapboxgl.Map | null>(null);
-    const markersRef = useRef<mapboxgl.Marker[]>([]);
+    const mapRef = useRef<L.Map | null>(null);
+    const markersRef = useRef<L.Marker[]>([]);
 
     useEffect(() => {
-        if (!mapContainerRef.current) return;
+        if (!mapContainerRef.current || mapRef.current) return;
 
         // Initialize map
-        const map = new mapboxgl.Map({
-            container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/dark-v11', // Premium dark style
-            center: [-71.5, -35.6751], // Center of Chile
-            zoom: 4,
-            projection: { name: 'mercator' }
+        const map = L.map(mapContainerRef.current, {
+            center: [-35.6751, -71.5], // Center of Chile
+            zoom: 5,
+            zoomControl: false,
+            attributionControl: false
         });
 
         mapRef.current = map;
 
-        // Add navigation controls
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        // Add OpenStreetMap Voyager (Dark Mode feel) or CartoDB Dark Matter
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
 
-        map.on('load', () => {
-            updateMarkers();
-        });
+        // Add zoom control at top right
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        updateMarkers();
 
         return () => {
-            markersRef.current.forEach(m => m.remove());
-            map.remove();
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
         };
     }, []);
 
     // Update markers when data changes
     useEffect(() => {
-        if (mapRef.current && mapRef.current.loaded()) {
+        if (mapRef.current) {
             updateMarkers();
         }
     }, [data]);
@@ -70,75 +73,75 @@ export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
         data.forEach(region => {
             if (!region.coords) return;
 
-            // Create custom HTML element for marker
-            const el = document.createElement('div');
-            el.className = 'custom-marker';
-            el.style.width = '30px';
-            el.style.height = '30px';
-            el.style.borderRadius = '50%';
-            el.style.backgroundColor = 'rgba(6, 182, 212, 0.2)'; // cyan-500/20
-            el.style.border = '2px solid rgb(6, 182, 212)'; // cyan-500
-            el.style.display = 'flex';
-            el.style.alignItems = 'center';
-            el.style.justifyContent = 'center';
-            el.style.cursor = 'pointer';
-            el.style.boxShadow = '0 0 15px rgba(6, 182, 212, 0.5)';
-            el.style.transition = 'all 0.3s ease';
-
-            el.innerHTML = `<span style="color: white; font-size: 10px; font-weight: bold;">${region.count}</span>`;
-
-            el.addEventListener('mouseenter', () => {
-                el.style.transform = 'scale(1.2)';
-                el.style.backgroundColor = 'rgba(6, 182, 212, 0.4)';
+            // Create custom icon
+            const customIcon = L.divIcon({
+                className: 'custom-leaflet-marker',
+                html: `
+                    <div style="
+                        width: 30px; 
+                        height: 30px; 
+                        border-radius: 50%; 
+                        background-color: rgba(6, 182, 212, 0.2); 
+                        border: 2px solid rgb(6, 182, 212); 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    ">
+                        <span style="color: white; font-size: 10px; font-weight: bold;">${region.count}</span>
+                    </div>
+                `,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
             });
 
-            el.addEventListener('mouseleave', () => {
-                el.style.transform = 'scale(1)';
-                el.style.backgroundColor = 'rgba(6, 182, 212, 0.2)';
-            });
-
-            el.onclick = () => {
-                mapRef.current?.flyTo({
-                    center: [region.coords.lng, region.coords.lat],
-                    zoom: 7,
-                    essential: true
+            const marker = L.marker([region.coords.lat, region.coords.lng], { icon: customIcon })
+                .addTo(mapRef.current!)
+                .on('click', (e) => {
+                    mapRef.current?.flyTo([region.coords.lat, region.coords.lng], 7, {
+                        animate: true,
+                        duration: 1.5
+                    });
+                    onRegionSelect(region);
                 });
-                onRegionSelect(region);
-            };
-
-            const marker = new mapboxgl.Marker(el)
-                .setLngLat([region.coords.lng, region.coords.lat])
-                .addTo(mapRef.current!);
 
             markersRef.current.push(marker);
         });
     };
 
-    if (!mapboxgl.accessToken) {
-        return (
-            <div className="w-full h-full bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center p-8 text-center">
-                <div className="max-w-md space-y-4">
-                    <p className="text-slate-400">
-                        Mapbox access token is missing. Please add
-                        <code className="mx-2 px-1.5 py-0.5 bg-white/5 rounded text-cyan-400">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</code>
-                        to your <code className="px-1.5 py-0.5 bg-white/5 rounded text-white">.env.local</code>.
-                    </p>
-                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                        <p className="text-xs text-amber-500">
-                            You can get a free token at <a href="https://mapbox.com" target="_blank" className="underline">mapbox.com</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="w-full h-full relative rounded-2xl overflow-hidden border border-white/10">
-            <div ref={mapContainerRef} className="absolute inset-0" />
+        <div className="w-full h-full relative rounded-2xl overflow-hidden border border-white/10 bg-[#0a0a0a]">
+            <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+
+            {/* Custom Styles for Leaflet */}
+            <style jsx global>{`
+                .leaflet-container {
+                    background: #0a0a0a !important;
+                }
+                .leaflet-bar {
+                    border: 1px solid rgba(255,255,255,0.1) !important;
+                    background: rgba(15,23,42,0.8) !important;
+                    backdrop-filter: blur(8px);
+                }
+                .leaflet-bar a {
+                    color: #94a3b8 !important;
+                    background: transparent !important;
+                    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+                }
+                .leaflet-bar a:hover {
+                    color: white !important;
+                    background: rgba(255,255,255,0.05) !important;
+                }
+                .custom-leaflet-marker:hover div {
+                    transform: scale(1.2);
+                    background-color: rgba(6, 182, 212, 0.4) !important;
+                }
+            `}</style>
 
             {/* Legend Overlay */}
-            <div className="absolute top-4 left-4 bg-[#030712]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 pointer-events-none">
+            <div className="absolute top-4 left-4 z-[1000] bg-[#030712]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 pointer-events-none">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Distribución</h4>
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
