@@ -28,9 +28,11 @@ export default function ComisionesPage() {
 
                 const res = await fetch(url)
                 const data = await res.json()
-                setCommittees(data)
+                // Handle new API format that returns { committees: [...] }
+                setCommittees(Array.isArray(data) ? data : (data.committees || []))
             } catch (err) {
                 console.error('Error fetching committees:', err)
+                setCommittees([])
             } finally {
                 setLoading(false)
             }
@@ -39,7 +41,7 @@ export default function ComisionesPage() {
         fetchCommittees()
     }, [camaraFilter, tipoFilter])
 
-    const filteredCommittees = committees.filter(c =>
+    const filteredCommittees = (Array.isArray(committees) ? committees : []).filter(c =>
         c.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.nombre_corto?.toLowerCase().includes(searchQuery.toLowerCase())
     )
