@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getPartyColor, PARTY_COLORS } from '@/lib/constants/party-colors';
 
 interface RegionData {
     region: string;
@@ -16,9 +17,11 @@ interface RegionData {
 interface LegislativeMapProps {
     data: RegionData[];
     onRegionSelect: (region: RegionData | null) => void;
+    viewMode?: 'default' | 'party';
+    chamberFilter?: 'all' | 'senado' | 'camara';
 }
 
-export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
+export function LegislativeMap({ data, onRegionSelect, viewMode = 'default', chamberFilter = 'all' }: LegislativeMapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
     const markersRef = useRef<L.Marker[]>([]);
@@ -56,12 +59,12 @@ export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
         };
     }, []);
 
-    // Update markers when data changes
+    // Update markers when data or view mode changes
     useEffect(() => {
         if (mapRef.current) {
             updateMarkers();
         }
-    }, [data]);
+    }, [data, viewMode, chamberFilter]);
 
     const updateMarkers = () => {
         if (!mapRef.current) return;
@@ -73,7 +76,33 @@ export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
         data.forEach(region => {
             if (!region.coords) return;
 
-            // Create custom icon
+            // Filter by chamber
+            const filteredParliamentarians = region.parliamentarians.filter((p: any) => {
+                if (chamberFilter === 'all') return true;
+                return p.camara === chamberFilter;
+            });
+
+            const count = filteredParliamentarians.length;
+            if (count === 0) return; // Skip regions with no parliamentarians after filtering
+
+            // Determine marker color based on view mode
+            let markerColor = 'rgb(6, 182, 212)'; // Default cyan
+
+            if (viewMode === 'party' && filteredParliamentarians.length > 0) {
+                // Get dominant party/ideology
+                const partyCounts: Record<string, number> = {};
+                filteredParliamentarians.forEach((p: any) => {
+                    const color = getPartyColor(p.partido);
+                    partyCounts[color] = (partyCounts[color] || 0) + 1;
+                });
+
+                // Find most common color
+                const dominantColor = Object.entries(partyCounts)
+                    .sort((a, b) => b[1] - a[1])[0][0];
+                markerColor = dominantColor;
+            }
+
+            // Create custom icon with dynamic color
             const customIcon = L.divIcon({
                 className: 'custom-leaflet-marker',
                 html: `
@@ -81,16 +110,16 @@ export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
                         width: 30px; 
                         height: 30px; 
                         border-radius: 50%; 
-                        background-color: rgba(6, 182, 212, 0.2); 
-                        border: 2px solid rgb(6, 182, 212); 
+                        background-color: ${markerColor}33; 
+                        border: 2px solid ${markerColor}; 
                         display: flex; 
                         align-items: center; 
                         justify-content: center; 
-                        box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+                        box-shadow: 0 0 15px ${markerColor}80;
                         cursor: pointer;
                         transition: all 0.3s ease;
                     ">
-                        <span style="color: white; font-size: 10px; font-weight: bold;">${region.count}</span>
+                        <span style="color: white; font-size: 10px; font-weight: bold;">${count}</span>
                     </div>
                 `,
                 iconSize: [30, 30],
@@ -144,10 +173,27 @@ export function LegislativeMap({ data, onRegionSelect }: LegislativeMapProps) {
             <div className="absolute top-4 left-4 z-[1000] bg-[#030712]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 pointer-events-none">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Distribución</h4>
                 <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
-                        <span className="text-xs text-white">Representantes</span>
-                    </div>
+                    {viewMode === 'default' ? (
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
+                            <span className="text-xs text-white">Representantes</span>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.PS }} />
+                                <span className="text-xs text-white">Izq</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.DC }} />
+                                <span className="text-xs text-white">Centro</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.RN }} />
+                                <span className="text-xs text-white">Der</span>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

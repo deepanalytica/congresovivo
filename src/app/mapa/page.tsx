@@ -2,16 +2,20 @@
 
 import '../globals.css'
 import { LegislativeMap } from '@/components/legislature/LegislativeMap'
-import { Map, ArrowLeft, Users, Building2, MapPin, Search, Filter } from 'lucide-react'
+import { Map, ArrowLeft, Users, Building2, MapPin, Search, Filter, Palette, Mail, Award, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { MotionCard } from '@/components/ui/MotionCard'
+import { getPartyColor, getIdeologyFromParty } from '@/lib/constants/party-colors'
 
 export default function MapaPage() {
     const [mapData, setMapData] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedRegion, setSelectedRegion] = useState<any>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const [viewMode, setViewMode] = useState<'default' | 'party'>('default')
+    const [chamberFilter, setChamberFilter] = useState<'all' | 'senado' | 'camara'>('all')
+    const [selectedParliamentarian, setSelectedParliamentarian] = useState<any>(null)
 
     useEffect(() => {
         const fetchMapData = async () => {
@@ -63,6 +67,66 @@ export default function MapaPage() {
                     </div>
                 </div>
 
+                {/* Filters */}
+                <div className="flex flex-wrap gap-4">
+                    {/* Visualization Mode */}
+                    <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
+                        <Palette className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs text-slate-500">Vista:</span>
+                        <button
+                            onClick={() => setViewMode('default')}
+                            className={`px-3 py-1 text-xs rounded-lg transition-all ${viewMode === 'default'
+                                    ? 'bg-cyan-500 text-white'
+                                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                        >
+                            Por región
+                        </button>
+                        <button
+                            onClick={() => setViewMode('party')}
+                            className={`px-3 py-1 text-xs rounded-lg transition-all ${viewMode === 'party'
+                                    ? 'bg-cyan-500 text-white'
+                                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                        >
+                            Por partido
+                        </button>
+                    </div>
+
+                    {/* Chamber Filter */}
+                    <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
+                        <Filter className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs text-slate-500">Cámara:</span>
+                        <button
+                            onClick={() => setChamberFilter('all')}
+                            className={`px-3 py-1 text-xs rounded-lg transition-all ${chamberFilter === 'all'
+                                    ? 'bg-cyan-500 text-white'
+                                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                        >
+                            Todas
+                        </button>
+                        <button
+                            onClick={() => setChamberFilter('senado')}
+                            className={`px-3 py-1 text-xs rounded-lg transition-all ${chamberFilter === 'senado'
+                                    ? 'bg-cyan-500 text-white'
+                                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                        >
+                            Senado
+                        </button>
+                        <button
+                            onClick={() => setChamberFilter('camara')}
+                            className={`px-3 py-1 text-xs rounded-lg transition-all ${chamberFilter === 'camara'
+                                    ? 'bg-cyan-500 text-white'
+                                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                                }`}
+                        >
+                            Diputados
+                        </button>
+                    </div>
+                </div>
+
                 {/* Main Content: Map + Sidebar */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-[600px]">
                     {/* Map Container */}
@@ -75,6 +139,8 @@ export default function MapaPage() {
                             <LegislativeMap
                                 data={mapData}
                                 onRegionSelect={(region) => setSelectedRegion(region)}
+                                viewMode={viewMode}
+                                chamberFilter={chamberFilter}
                             />
                         )}
                     </div>
@@ -121,19 +187,40 @@ export default function MapaPage() {
                                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Representantes</h3>
                                     <div className="space-y-3">
-                                        {selectedRegion.parliamentarians.map((p: any) => (
-                                            <div key={p.id} className="p-3 bg-white/5 rounded-lg border border-white/5 hover:border-cyan-500/30 transition-all flex items-center justify-between group">
-                                                <div>
-                                                    <p className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">
-                                                        {p.nombre_completo}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500">{p.partido}</p>
-                                                </div>
-                                                <Badge variant="outline" className="text-[10px] py-0 h-5">
-                                                    {p.camara === 'senado' ? 'S' : 'D'}
-                                                </Badge>
-                                            </div>
-                                        ))}
+                                        {selectedRegion.parliamentarians
+                                            .filter((p: any) => {
+                                                if (chamberFilter === 'all') return true;
+                                                return p.camara === chamberFilter;
+                                            })
+                                            .map((p: any) => {
+                                                const ideology = getIdeologyFromParty(p.partido);
+                                                return (
+                                                    <div
+                                                        key={p.id}
+                                                        onClick={() => setSelectedParliamentarian(p)}
+                                                        className="p-3 bg-white/5 rounded-lg border border-white/5 hover:border-cyan-500/30 transition-all cursor-pointer group"
+                                                    >
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">
+                                                                    {p.nombre_completo}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <p className="text-xs text-slate-500">{p.partido || 'Independiente'}</p>
+                                                                    <span className="text-slate-700">•</span>
+                                                                    <span className="text-xs" style={{ color: getPartyColor(p.partido) }}>
+                                                                        {ideology}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <Badge variant="outline" className="text-[10px] py-0 h-5 ml-2">
+                                                                {p.camara === 'senado' ? 'S' : 'D'}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        }
                                     </div>
                                 </div>
                             </MotionCard>
@@ -149,6 +236,90 @@ export default function MapaPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Parliamentarian Detail Modal */}
+            {selectedParliamentarian && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setSelectedParliamentarian(null)}
+                >
+                    <div
+                        className="bg-[#0f172a] border border-white/20 rounded-2xl max-w-md w-full p-6 relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setSelectedParliamentarian(null)}
+                            className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        >
+                            <X className="w-4 h-4 text-slate-400" />
+                        </button>
+
+                        <div className="mb-6">
+                            <div className="flex items-start gap-3 mb-4">
+                                <div
+                                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl"
+                                    style={{ backgroundColor: getPartyColor(selectedParliamentarian.partido) }}
+                                >
+                                    {selectedParliamentarian.nombre_completo.charAt(0)}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-white">
+                                        {selectedParliamentarian.nombre_completo}
+                                    </h3>
+                                    <Badge className="mt-2">
+                                        {selectedParliamentarian.camara === 'senado' ? 'Senador(a)' : 'Diputado(a)'}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-white/5 p-4 rounded-xl">
+                                <p className="text-xs text-slate-500 mb-1">Partido Político</p>
+                                <p className="text-white font-semibold">{selectedParliamentarian.partido || 'Independiente'}</p>
+                            </div>
+
+                            <div className="bg-white/5 p-4 rounded-xl">
+                                <p className="text-xs text-slate-500 mb-1">Ideología</p>
+                                <div className="flex items-center gap-2">
+                                    <Award className="w-4 h-4" style={{ color: getPartyColor(selectedParliamentarian.partido) }} />
+                                    <p className="text-white font-semibold">
+                                        {getIdeologyFromParty(selectedParliamentarian.partido)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/5 p-4 rounded-xl">
+                                <p className="text-xs text-slate-500 mb-1">Región</p>
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-cyan-400" />
+                                    <p className="text-white font-semibold">{selectedParliamentarian.region}</p>
+                                </div>
+                            </div>
+
+                            {selectedParliamentarian.distrito && (
+                                <div className="bg-white/5 p-4 rounded-xl">
+                                    <p className="text-xs text-slate-500 mb-1">Distrito Electoral</p>
+                                    <p className="text-white font-semibold">Distrito N°{selectedParliamentarian.distrito}</p>
+                                </div>
+                            )}
+
+                            {selectedParliamentarian.email && (
+                                <div className="bg-white/5 p-4 rounded-xl">
+                                    <p className="text-xs text-slate-500 mb-1">Contacto</p>
+                                    <a
+                                        href={`mailto:${selectedParliamentarian.email}`}
+                                        className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 transition-colors"
+                                    >
+                                        <Mail className="w-4 h-4" />
+                                        <p className="text-sm">{selectedParliamentarian.email}</p>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

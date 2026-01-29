@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { getServerSupabase } from '@/lib/supabase/client';
 
 /**
  * GET /api/map/parliamentarians
@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase/client';
  */
 export async function GET(request: NextRequest) {
     try {
+        const supabase = getServerSupabase();
+
         // Fetch all parliamentarians with their location info
         const { data: parliamentarians, error } = await supabase
             .from('parliamentarians')
@@ -36,7 +38,16 @@ export async function GET(request: NextRequest) {
 
         // Group by region
         const aggregated = parliamentarians.reduce((acc: any, p) => {
-            const region = p.region || 'Desconocida';
+            let region = (p.region || 'Desconocida').trim(); // Trim whitespace
+
+            // Normalize region name to match keys
+            region = region.replace('Región de ', '').replace('Región del ', '');
+            if (region === "Libertador General Bernardo O'Higgins") region = "O'Higgins";
+            if (region === "Libertador General Bernardo O'Higgins") region = "O'Higgins";
+            if (region === "Magallanes y de la Antártica Chilena") region = "Magallanes";
+            if (region === "Aysén del General Carlos Ibáñez del Campo") region = "Aysén";
+            if (region === "Metropolitana de Santiago") region = "Metropolitana";
+
             if (!acc[region]) {
                 acc[region] = {
                     region,

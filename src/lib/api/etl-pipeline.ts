@@ -26,7 +26,7 @@ export async function syncParlamentarians() {
         // 2. TRANSFORM: Normalize data
         const allParlamentarians = [
             ...senadores.map(s => ({
-                external_id: `S-${s.id}`,
+                external_id: `SEN-${s.id}`,
                 nombre_completo: `${s.nombre} ${s.apellidoPaterno} ${s.apellidoMaterno}`,
                 nombre: s.nombre,
                 apellido_paterno: s.apellidoPaterno,
@@ -42,7 +42,7 @@ export async function syncParlamentarians() {
                 synced_at: new Date().toISOString(),
             })),
             ...diputados.map(d => ({
-                external_id: `D-${d.id}`,
+                external_id: `DIP-${d.id}`,
                 nombre_completo: `${d.nombre} ${d.apellidoPaterno} ${d.apellidoMaterno}`,
                 nombre: d.nombre,
                 apellido_paterno: d.apellidoPaterno,

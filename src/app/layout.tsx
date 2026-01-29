@@ -1,3 +1,6 @@
+import { MobileNav } from '@/components/ui/MobileNav'
+import '@/app/globals.css' // Ensure globals are imported if not already
+
 export default function RootLayout({
     children,
 }: {
@@ -14,6 +17,7 @@ export default function RootLayout({
             </head>
             <body>
                 {children}
+                <MobileNav />
             </body>
         </html>
     )

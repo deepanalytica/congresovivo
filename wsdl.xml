@@ -1,0 +1,1303 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://tempuri.org/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://tempuri.org/">
+      <s:element name="getPeriodosLegislativos">
+        <s:complexType />
+      </s:element>
+      <s:element name="getPeriodosLegislativosResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="PeriodosLegislativo" nillable="true" type="tns:classPeriodosLegislativoCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="classPeriodosLegislativoCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="PeriodoLegislativo" type="tns:classPeriodoLegislativo" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classPeriodoLegislativo">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="ID" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Inicio" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Termino" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Nombre" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getPeriodoLegislativoActual">
+        <s:complexType />
+      </s:element>
+      <s:element name="getPeriodoLegislativoActualResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="PeriodoLegislativo" nillable="true" type="tns:classPeriodoLegislativo" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getDiputados_Vigentes">
+        <s:complexType />
+      </s:element>
+      <s:element name="getDiputados_VigentesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Diputados" nillable="true" type="tns:classDiputadosCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="classDiputadosCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Diputado" type="tns:classDiputado" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classDiputado">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="DIPID" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="Nombre" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Nombre2" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Apellido_Paterno" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Apellido_Materno" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Fecha_Nacimiento" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Fecha_Defuncion" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Sexo" type="tns:classTipoSexo" />
+          <s:element minOccurs="0" maxOccurs="1" name="Militancia_Actual" type="tns:classMilitancia" />
+          <s:element minOccurs="0" maxOccurs="1" name="Militancias_Periodos" type="tns:classMilitanciasCollection" />
+          <s:element minOccurs="0" maxOccurs="1" name="Ejercicio_Periodo_Legislativo_Actual" type="tns:classEjercicioPeriodoLegislativo" />
+          <s:element minOccurs="0" maxOccurs="1" name="Ejercicios_Periodos_Legislativos" type="tns:classEjerciciosPeriodosLegislativosCollection" />
+          <s:element minOccurs="0" maxOccurs="1" name="Correo_Electronico" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classTipoSexo">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="ClassTipo" abstract="true">
+        <s:simpleContent>
+          <s:extension base="s:string">
+            <s:attribute name="Codigo" type="s:int" use="required" />
+          </s:extension>
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classMilitancia">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Periodo" type="tns:classPeriodoLegislativo" />
+          <s:element minOccurs="0" maxOccurs="1" name="Partido" type="tns:classPartidoPolitico" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Inicio" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Termino" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Estado" type="s:boolean" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classPartidoPolitico">
+        <s:simpleContent>
+          <s:extension base="s:string">
+            <s:attribute name="Codigo" type="s:string" />
+          </s:extension>
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classMilitanciasCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Militancia" type="tns:classMilitancia" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classEjercicioPeriodoLegislativo">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="Numero" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="Periodo" type="tns:classPeriodoLegislativo" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Inicio" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Termino" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Distrito" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Estado" type="s:boolean" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classEjerciciosPeriodosLegislativosCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="EjercicioPeriodoLegislativo" type="tns:classEjercicioPeriodoLegislativo" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getDiputados_Periodo">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="prmPeriodoID" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getDiputados_PeriodoResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Diputados" nillable="true" type="tns:classDiputadosCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getVotaciones_Boletin">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="prmBoletin" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getVotaciones_BoletinResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Votaciones" nillable="true" type="tns:classVotacionesCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="classVotacionesCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Votacion" type="tns:classVotacion" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classVotacion">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="ID" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Tipo" type="tns:classTipoVotacion" />
+          <s:element minOccurs="0" maxOccurs="1" name="Resultado" type="tns:classTipoResultadoVotacion" />
+          <s:element minOccurs="0" maxOccurs="1" name="Quorum" type="tns:classTipoQuorum" />
+          <s:element minOccurs="0" maxOccurs="1" name="Sesion" type="tns:classSesion" />
+          <s:element minOccurs="0" maxOccurs="1" name="Boletin" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Articulo" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Tramite" type="tns:classTramiteConstitucional" />
+          <s:element minOccurs="0" maxOccurs="1" name="Informe" type="tns:classTipoInforme" />
+          <s:element minOccurs="1" maxOccurs="1" name="TotalAfirmativos" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="TotalNegativos" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="TotalAbstenciones" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="TotalDispensados" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="Votos" type="tns:classVotosCollenction" />
+          <s:element minOccurs="0" maxOccurs="1" name="Pareos" type="tns:classPareosCollenction" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classTipoVotacion">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classTipoResultadoVotacion">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classTipoQuorum">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classSesion">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="ID" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Numero" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="FechaTermino" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Tipo" type="tns:classTipoSesion" />
+          <s:element minOccurs="0" maxOccurs="1" name="Estado" type="tns:classTipoEstadoSesion" />
+          <s:element minOccurs="0" maxOccurs="1" name="Asistencia" type="tns:classAsitenciaSala" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classTipoSesion">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classTipoEstadoSesion">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classAsitenciaSala">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="AsistenteSala" type="tns:classAsistenteSala" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classAsistenteSala">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Asistencia" type="tns:classTipoAsistenciaSala" />
+          <s:element minOccurs="0" maxOccurs="1" name="Diputado" type="tns:classDiputado" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classTipoAsistenciaSala">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo">
+            <s:attribute name="Asiste" type="s:boolean" use="required" />
+          </s:extension>
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classTramiteConstitucional">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classTipoInforme">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classVotosCollenction">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Voto" type="tns:classVoto" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classVoto">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Diputado" type="tns:classDiputado" />
+          <s:element minOccurs="0" maxOccurs="1" name="Opcion" type="tns:classOpcionVoto" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classOpcionVoto">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classPareosCollenction">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Pareo" type="tns:classPareo" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classPareo">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Diputado1" type="tns:classDiputado" />
+          <s:element minOccurs="0" maxOccurs="1" name="Diputado2" type="tns:classDiputado" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getVotacion_Detalle">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="prmVotacionID" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getVotacion_DetalleResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Votacion" nillable="true" type="tns:classVotacion" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getComisiones_Vigentes">
+        <s:complexType />
+      </s:element>
+      <s:element name="getComisiones_VigentesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Comisiones" nillable="true" type="tns:classComisionesCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="classComisionesCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Comision" type="tns:classComision" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classComision">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="ID" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="Nombre" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Nombre_Alias" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Nombre_Web" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Tipo" type="tns:classTipoComision" />
+          <s:element minOccurs="0" maxOccurs="1" name="Correo_Electronico" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Telefono" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Fax" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Fecha_Constitucion" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Fecha_Termino" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="Periodo" type="tns:classPeriodoLegislativo" />
+          <s:element minOccurs="0" maxOccurs="1" name="Presidente" type="tns:classDiputado" />
+          <s:element minOccurs="0" maxOccurs="1" name="Secretario" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Integrantes" type="tns:classIntegrantesComision" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classTipoComision">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:complexType name="classIntegrantesComision">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="IntegranteComision" type="tns:classIntegranteComision" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classIntegranteComision">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Inicio" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Fecha_Termino" nillable="true" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="Activo" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Diputado" type="tns:classDiputado" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getDiputados">
+        <s:complexType />
+      </s:element>
+      <s:element name="getDiputadosResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Diputados" nillable="true" type="tns:classDiputadosCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getLegislaturas">
+        <s:complexType />
+      </s:element>
+      <s:element name="getLegislaturasResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Legislaturas" nillable="true" type="tns:classLegislaturasCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="classLegislaturasCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Legislatura" type="tns:classLegislatura" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classLegislatura">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="ID" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Numero" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="Tipo" type="tns:classTipoLegislatura" />
+          <s:element minOccurs="1" maxOccurs="1" name="FechaInicio" type="s:dateTime" />
+          <s:element minOccurs="1" maxOccurs="1" name="FechaTermino" type="s:dateTime" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="classTipoLegislatura">
+        <s:simpleContent>
+          <s:extension base="tns:ClassTipo" />
+        </s:simpleContent>
+      </s:complexType>
+      <s:element name="getLegislaturaActual">
+        <s:complexType />
+      </s:element>
+      <s:element name="getLegislaturaActualResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Legislatura" nillable="true" type="tns:classLegislatura" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSesiones">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="prmLegislaturaID" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSesionesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Sesiones" nillable="true" type="tns:classSesionesCollection" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="classSesionesCollection">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Sesion" type="tns:classSesion" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getSesionDetalle">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="prmSesionID" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSesionDetalleResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Sesion" nillable="true" type="tns:classSesion" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSesionBoletinXML">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="prmSesionID" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSesionBoletinXMLResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getSesionBoletinXMLResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="PeriodosLegislativo" nillable="true" type="tns:classPeriodosLegislativoCollection" />
+      <s:element name="PeriodoLegislativo" nillable="true" type="tns:classPeriodoLegislativo" />
+      <s:element name="Diputados" nillable="true" type="tns:classDiputadosCollection" />
+      <s:element name="Votaciones" nillable="true" type="tns:classVotacionesCollection" />
+      <s:element name="Votacion" nillable="true" type="tns:classVotacion" />
+      <s:element name="Comisiones" nillable="true" type="tns:classComisionesCollection" />
+      <s:element name="Legislaturas" nillable="true" type="tns:classLegislaturasCollection" />
+      <s:element name="Legislatura" nillable="true" type="tns:classLegislatura" />
+      <s:element name="Sesiones" nillable="true" type="tns:classSesionesCollection" />
+      <s:element name="Sesion" nillable="true" type="tns:classSesion" />
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="getPeriodosLegislativosSoapIn">
+    <wsdl:part name="parameters" element="tns:getPeriodosLegislativos" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodosLegislativosSoapOut">
+    <wsdl:part name="parameters" element="tns:getPeriodosLegislativosResponse" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodoLegislativoActualSoapIn">
+    <wsdl:part name="parameters" element="tns:getPeriodoLegislativoActual" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodoLegislativoActualSoapOut">
+    <wsdl:part name="parameters" element="tns:getPeriodoLegislativoActualResponse" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_VigentesSoapIn">
+    <wsdl:part name="parameters" element="tns:getDiputados_Vigentes" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_VigentesSoapOut">
+    <wsdl:part name="parameters" element="tns:getDiputados_VigentesResponse" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_PeriodoSoapIn">
+    <wsdl:part name="parameters" element="tns:getDiputados_Periodo" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_PeriodoSoapOut">
+    <wsdl:part name="parameters" element="tns:getDiputados_PeriodoResponse" />
+  </wsdl:message>
+  <wsdl:message name="getVotaciones_BoletinSoapIn">
+    <wsdl:part name="parameters" element="tns:getVotaciones_Boletin" />
+  </wsdl:message>
+  <wsdl:message name="getVotaciones_BoletinSoapOut">
+    <wsdl:part name="parameters" element="tns:getVotaciones_BoletinResponse" />
+  </wsdl:message>
+  <wsdl:message name="getVotacion_DetalleSoapIn">
+    <wsdl:part name="parameters" element="tns:getVotacion_Detalle" />
+  </wsdl:message>
+  <wsdl:message name="getVotacion_DetalleSoapOut">
+    <wsdl:part name="parameters" element="tns:getVotacion_DetalleResponse" />
+  </wsdl:message>
+  <wsdl:message name="getComisiones_VigentesSoapIn">
+    <wsdl:part name="parameters" element="tns:getComisiones_Vigentes" />
+  </wsdl:message>
+  <wsdl:message name="getComisiones_VigentesSoapOut">
+    <wsdl:part name="parameters" element="tns:getComisiones_VigentesResponse" />
+  </wsdl:message>
+  <wsdl:message name="getDiputadosSoapIn">
+    <wsdl:part name="parameters" element="tns:getDiputados" />
+  </wsdl:message>
+  <wsdl:message name="getDiputadosSoapOut">
+    <wsdl:part name="parameters" element="tns:getDiputadosResponse" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturasSoapIn">
+    <wsdl:part name="parameters" element="tns:getLegislaturas" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturasSoapOut">
+    <wsdl:part name="parameters" element="tns:getLegislaturasResponse" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturaActualSoapIn">
+    <wsdl:part name="parameters" element="tns:getLegislaturaActual" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturaActualSoapOut">
+    <wsdl:part name="parameters" element="tns:getLegislaturaActualResponse" />
+  </wsdl:message>
+  <wsdl:message name="getSesionesSoapIn">
+    <wsdl:part name="parameters" element="tns:getSesiones" />
+  </wsdl:message>
+  <wsdl:message name="getSesionesSoapOut">
+    <wsdl:part name="parameters" element="tns:getSesionesResponse" />
+  </wsdl:message>
+  <wsdl:message name="getSesionDetalleSoapIn">
+    <wsdl:part name="parameters" element="tns:getSesionDetalle" />
+  </wsdl:message>
+  <wsdl:message name="getSesionDetalleSoapOut">
+    <wsdl:part name="parameters" element="tns:getSesionDetalleResponse" />
+  </wsdl:message>
+  <wsdl:message name="getSesionBoletinXMLSoapIn">
+    <wsdl:part name="parameters" element="tns:getSesionBoletinXML" />
+  </wsdl:message>
+  <wsdl:message name="getSesionBoletinXMLSoapOut">
+    <wsdl:part name="parameters" element="tns:getSesionBoletinXMLResponse" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodosLegislativosHttpGetIn" />
+  <wsdl:message name="getPeriodosLegislativosHttpGetOut">
+    <wsdl:part name="Body" element="tns:PeriodosLegislativo" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodoLegislativoActualHttpGetIn" />
+  <wsdl:message name="getPeriodoLegislativoActualHttpGetOut">
+    <wsdl:part name="Body" element="tns:PeriodoLegislativo" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_VigentesHttpGetIn" />
+  <wsdl:message name="getDiputados_VigentesHttpGetOut">
+    <wsdl:part name="Body" element="tns:Diputados" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_PeriodoHttpGetIn">
+    <wsdl:part name="prmPeriodoID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_PeriodoHttpGetOut">
+    <wsdl:part name="Body" element="tns:Diputados" />
+  </wsdl:message>
+  <wsdl:message name="getVotaciones_BoletinHttpGetIn">
+    <wsdl:part name="prmBoletin" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getVotaciones_BoletinHttpGetOut">
+    <wsdl:part name="Body" element="tns:Votaciones" />
+  </wsdl:message>
+  <wsdl:message name="getVotacion_DetalleHttpGetIn">
+    <wsdl:part name="prmVotacionID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getVotacion_DetalleHttpGetOut">
+    <wsdl:part name="Body" element="tns:Votacion" />
+  </wsdl:message>
+  <wsdl:message name="getComisiones_VigentesHttpGetIn" />
+  <wsdl:message name="getComisiones_VigentesHttpGetOut">
+    <wsdl:part name="Body" element="tns:Comisiones" />
+  </wsdl:message>
+  <wsdl:message name="getDiputadosHttpGetIn" />
+  <wsdl:message name="getDiputadosHttpGetOut">
+    <wsdl:part name="Body" element="tns:Diputados" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturasHttpGetIn" />
+  <wsdl:message name="getLegislaturasHttpGetOut">
+    <wsdl:part name="Body" element="tns:Legislaturas" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturaActualHttpGetIn" />
+  <wsdl:message name="getLegislaturaActualHttpGetOut">
+    <wsdl:part name="Body" element="tns:Legislatura" />
+  </wsdl:message>
+  <wsdl:message name="getSesionesHttpGetIn">
+    <wsdl:part name="prmLegislaturaID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getSesionesHttpGetOut">
+    <wsdl:part name="Body" element="tns:Sesiones" />
+  </wsdl:message>
+  <wsdl:message name="getSesionDetalleHttpGetIn">
+    <wsdl:part name="prmSesionID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getSesionDetalleHttpGetOut">
+    <wsdl:part name="Body" element="tns:Sesion" />
+  </wsdl:message>
+  <wsdl:message name="getSesionBoletinXMLHttpGetIn">
+    <wsdl:part name="prmSesionID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getSesionBoletinXMLHttpGetOut">
+    <wsdl:part name="Body" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodosLegislativosHttpPostIn" />
+  <wsdl:message name="getPeriodosLegislativosHttpPostOut">
+    <wsdl:part name="Body" element="tns:PeriodosLegislativo" />
+  </wsdl:message>
+  <wsdl:message name="getPeriodoLegislativoActualHttpPostIn" />
+  <wsdl:message name="getPeriodoLegislativoActualHttpPostOut">
+    <wsdl:part name="Body" element="tns:PeriodoLegislativo" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_VigentesHttpPostIn" />
+  <wsdl:message name="getDiputados_VigentesHttpPostOut">
+    <wsdl:part name="Body" element="tns:Diputados" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_PeriodoHttpPostIn">
+    <wsdl:part name="prmPeriodoID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getDiputados_PeriodoHttpPostOut">
+    <wsdl:part name="Body" element="tns:Diputados" />
+  </wsdl:message>
+  <wsdl:message name="getVotaciones_BoletinHttpPostIn">
+    <wsdl:part name="prmBoletin" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getVotaciones_BoletinHttpPostOut">
+    <wsdl:part name="Body" element="tns:Votaciones" />
+  </wsdl:message>
+  <wsdl:message name="getVotacion_DetalleHttpPostIn">
+    <wsdl:part name="prmVotacionID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getVotacion_DetalleHttpPostOut">
+    <wsdl:part name="Body" element="tns:Votacion" />
+  </wsdl:message>
+  <wsdl:message name="getComisiones_VigentesHttpPostIn" />
+  <wsdl:message name="getComisiones_VigentesHttpPostOut">
+    <wsdl:part name="Body" element="tns:Comisiones" />
+  </wsdl:message>
+  <wsdl:message name="getDiputadosHttpPostIn" />
+  <wsdl:message name="getDiputadosHttpPostOut">
+    <wsdl:part name="Body" element="tns:Diputados" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturasHttpPostIn" />
+  <wsdl:message name="getLegislaturasHttpPostOut">
+    <wsdl:part name="Body" element="tns:Legislaturas" />
+  </wsdl:message>
+  <wsdl:message name="getLegislaturaActualHttpPostIn" />
+  <wsdl:message name="getLegislaturaActualHttpPostOut">
+    <wsdl:part name="Body" element="tns:Legislatura" />
+  </wsdl:message>
+  <wsdl:message name="getSesionesHttpPostIn">
+    <wsdl:part name="prmLegislaturaID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getSesionesHttpPostOut">
+    <wsdl:part name="Body" element="tns:Sesiones" />
+  </wsdl:message>
+  <wsdl:message name="getSesionDetalleHttpPostIn">
+    <wsdl:part name="prmSesionID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getSesionDetalleHttpPostOut">
+    <wsdl:part name="Body" element="tns:Sesion" />
+  </wsdl:message>
+  <wsdl:message name="getSesionBoletinXMLHttpPostIn">
+    <wsdl:part name="prmSesionID" type="s:string" />
+  </wsdl:message>
+  <wsdl:message name="getSesionBoletinXMLHttpPostOut">
+    <wsdl:part name="Body" />
+  </wsdl:message>
+  <wsdl:portType name="WSCamaraDiputadosSoap">
+    <wsdl:operation name="getPeriodosLegislativos">
+      <wsdl:input message="tns:getPeriodosLegislativosSoapIn" />
+      <wsdl:output message="tns:getPeriodosLegislativosSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <wsdl:input message="tns:getPeriodoLegislativoActualSoapIn" />
+      <wsdl:output message="tns:getPeriodoLegislativoActualSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <wsdl:input message="tns:getDiputados_VigentesSoapIn" />
+      <wsdl:output message="tns:getDiputados_VigentesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <wsdl:input message="tns:getDiputados_PeriodoSoapIn" />
+      <wsdl:output message="tns:getDiputados_PeriodoSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <wsdl:input message="tns:getVotaciones_BoletinSoapIn" />
+      <wsdl:output message="tns:getVotaciones_BoletinSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <wsdl:input message="tns:getVotacion_DetalleSoapIn" />
+      <wsdl:output message="tns:getVotacion_DetalleSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <wsdl:input message="tns:getComisiones_VigentesSoapIn" />
+      <wsdl:output message="tns:getComisiones_VigentesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <wsdl:input message="tns:getDiputadosSoapIn" />
+      <wsdl:output message="tns:getDiputadosSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <wsdl:input message="tns:getLegislaturasSoapIn" />
+      <wsdl:output message="tns:getLegislaturasSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <wsdl:input message="tns:getLegislaturaActualSoapIn" />
+      <wsdl:output message="tns:getLegislaturaActualSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <wsdl:input message="tns:getSesionesSoapIn" />
+      <wsdl:output message="tns:getSesionesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <wsdl:input message="tns:getSesionDetalleSoapIn" />
+      <wsdl:output message="tns:getSesionDetalleSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <wsdl:input message="tns:getSesionBoletinXMLSoapIn" />
+      <wsdl:output message="tns:getSesionBoletinXMLSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:portType name="WSCamaraDiputadosHttpGet">
+    <wsdl:operation name="getPeriodosLegislativos">
+      <wsdl:input message="tns:getPeriodosLegislativosHttpGetIn" />
+      <wsdl:output message="tns:getPeriodosLegislativosHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <wsdl:input message="tns:getPeriodoLegislativoActualHttpGetIn" />
+      <wsdl:output message="tns:getPeriodoLegislativoActualHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <wsdl:input message="tns:getDiputados_VigentesHttpGetIn" />
+      <wsdl:output message="tns:getDiputados_VigentesHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <wsdl:input message="tns:getDiputados_PeriodoHttpGetIn" />
+      <wsdl:output message="tns:getDiputados_PeriodoHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <wsdl:input message="tns:getVotaciones_BoletinHttpGetIn" />
+      <wsdl:output message="tns:getVotaciones_BoletinHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <wsdl:input message="tns:getVotacion_DetalleHttpGetIn" />
+      <wsdl:output message="tns:getVotacion_DetalleHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <wsdl:input message="tns:getComisiones_VigentesHttpGetIn" />
+      <wsdl:output message="tns:getComisiones_VigentesHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <wsdl:input message="tns:getDiputadosHttpGetIn" />
+      <wsdl:output message="tns:getDiputadosHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <wsdl:input message="tns:getLegislaturasHttpGetIn" />
+      <wsdl:output message="tns:getLegislaturasHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <wsdl:input message="tns:getLegislaturaActualHttpGetIn" />
+      <wsdl:output message="tns:getLegislaturaActualHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <wsdl:input message="tns:getSesionesHttpGetIn" />
+      <wsdl:output message="tns:getSesionesHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <wsdl:input message="tns:getSesionDetalleHttpGetIn" />
+      <wsdl:output message="tns:getSesionDetalleHttpGetOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <wsdl:input message="tns:getSesionBoletinXMLHttpGetIn" />
+      <wsdl:output message="tns:getSesionBoletinXMLHttpGetOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:portType name="WSCamaraDiputadosHttpPost">
+    <wsdl:operation name="getPeriodosLegislativos">
+      <wsdl:input message="tns:getPeriodosLegislativosHttpPostIn" />
+      <wsdl:output message="tns:getPeriodosLegislativosHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <wsdl:input message="tns:getPeriodoLegislativoActualHttpPostIn" />
+      <wsdl:output message="tns:getPeriodoLegislativoActualHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <wsdl:input message="tns:getDiputados_VigentesHttpPostIn" />
+      <wsdl:output message="tns:getDiputados_VigentesHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <wsdl:input message="tns:getDiputados_PeriodoHttpPostIn" />
+      <wsdl:output message="tns:getDiputados_PeriodoHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <wsdl:input message="tns:getVotaciones_BoletinHttpPostIn" />
+      <wsdl:output message="tns:getVotaciones_BoletinHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <wsdl:input message="tns:getVotacion_DetalleHttpPostIn" />
+      <wsdl:output message="tns:getVotacion_DetalleHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <wsdl:input message="tns:getComisiones_VigentesHttpPostIn" />
+      <wsdl:output message="tns:getComisiones_VigentesHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <wsdl:input message="tns:getDiputadosHttpPostIn" />
+      <wsdl:output message="tns:getDiputadosHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <wsdl:input message="tns:getLegislaturasHttpPostIn" />
+      <wsdl:output message="tns:getLegislaturasHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <wsdl:input message="tns:getLegislaturaActualHttpPostIn" />
+      <wsdl:output message="tns:getLegislaturaActualHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <wsdl:input message="tns:getSesionesHttpPostIn" />
+      <wsdl:output message="tns:getSesionesHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <wsdl:input message="tns:getSesionDetalleHttpPostIn" />
+      <wsdl:output message="tns:getSesionDetalleHttpPostOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <wsdl:input message="tns:getSesionBoletinXMLHttpPostIn" />
+      <wsdl:output message="tns:getSesionBoletinXMLHttpPostOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="WSCamaraDiputadosSoap" type="tns:WSCamaraDiputadosSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getPeriodosLegislativos">
+      <soap:operation soapAction="http://tempuri.org/getPeriodosLegislativos" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <soap:operation soapAction="http://tempuri.org/getPeriodoLegislativoActual" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <soap:operation soapAction="http://tempuri.org/getDiputados_Vigentes" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <soap:operation soapAction="http://tempuri.org/getDiputados_Periodo" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <soap:operation soapAction="http://tempuri.org/getVotaciones_Boletin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <soap:operation soapAction="http://tempuri.org/getVotacion_Detalle" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <soap:operation soapAction="http://tempuri.org/getComisiones_Vigentes" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <soap:operation soapAction="http://tempuri.org/getDiputados" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <soap:operation soapAction="http://tempuri.org/getLegislaturas" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <soap:operation soapAction="http://tempuri.org/getLegislaturaActual" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <soap:operation soapAction="http://tempuri.org/getSesiones" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <soap:operation soapAction="http://tempuri.org/getSesionDetalle" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <soap:operation soapAction="http://tempuri.org/getSesionBoletinXML" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="WSCamaraDiputadosSoap12" type="tns:WSCamaraDiputadosSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getPeriodosLegislativos">
+      <soap12:operation soapAction="http://tempuri.org/getPeriodosLegislativos" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <soap12:operation soapAction="http://tempuri.org/getPeriodoLegislativoActual" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <soap12:operation soapAction="http://tempuri.org/getDiputados_Vigentes" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <soap12:operation soapAction="http://tempuri.org/getDiputados_Periodo" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <soap12:operation soapAction="http://tempuri.org/getVotaciones_Boletin" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <soap12:operation soapAction="http://tempuri.org/getVotacion_Detalle" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <soap12:operation soapAction="http://tempuri.org/getComisiones_Vigentes" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <soap12:operation soapAction="http://tempuri.org/getDiputados" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <soap12:operation soapAction="http://tempuri.org/getLegislaturas" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <soap12:operation soapAction="http://tempuri.org/getLegislaturaActual" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <soap12:operation soapAction="http://tempuri.org/getSesiones" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <soap12:operation soapAction="http://tempuri.org/getSesionDetalle" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <soap12:operation soapAction="http://tempuri.org/getSesionBoletinXML" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="WSCamaraDiputadosHttpGet" type="tns:WSCamaraDiputadosHttpGet">
+    <http:binding verb="GET" />
+    <wsdl:operation name="getPeriodosLegislativos">
+      <http:operation location="/getPeriodosLegislativos" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <http:operation location="/getPeriodoLegislativoActual" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <http:operation location="/getDiputados_Vigentes" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <http:operation location="/getDiputados_Periodo" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <http:operation location="/getVotaciones_Boletin" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <http:operation location="/getVotacion_Detalle" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <http:operation location="/getComisiones_Vigentes" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <http:operation location="/getDiputados" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <http:operation location="/getLegislaturas" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <http:operation location="/getLegislaturaActual" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <http:operation location="/getSesiones" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <http:operation location="/getSesionDetalle" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <http:operation location="/getSesionBoletinXML" />
+      <wsdl:input>
+        <http:urlEncoded />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:content part="Body" type="text/xml" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="WSCamaraDiputadosHttpPost" type="tns:WSCamaraDiputadosHttpPost">
+    <http:binding verb="POST" />
+    <wsdl:operation name="getPeriodosLegislativos">
+      <http:operation location="/getPeriodosLegislativos" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getPeriodoLegislativoActual">
+      <http:operation location="/getPeriodoLegislativoActual" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Vigentes">
+      <http:operation location="/getDiputados_Vigentes" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados_Periodo">
+      <http:operation location="/getDiputados_Periodo" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotaciones_Boletin">
+      <http:operation location="/getVotaciones_Boletin" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getVotacion_Detalle">
+      <http:operation location="/getVotacion_Detalle" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getComisiones_Vigentes">
+      <http:operation location="/getComisiones_Vigentes" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getDiputados">
+      <http:operation location="/getDiputados" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturas">
+      <http:operation location="/getLegislaturas" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getLegislaturaActual">
+      <http:operation location="/getLegislaturaActual" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesiones">
+      <http:operation location="/getSesiones" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionDetalle">
+      <http:operation location="/getSesionDetalle" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:mimeXml part="Body" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSesionBoletinXML">
+      <http:operation location="/getSesionBoletinXML" />
+      <wsdl:input>
+        <mime:content type="application/x-www-form-urlencoded" />
+      </wsdl:input>
+      <wsdl:output>
+        <mime:content part="Body" type="text/xml" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="WSCamaraDiputados">
+    <wsdl:port name="WSCamaraDiputadosSoap" binding="tns:WSCamaraDiputadosSoap">
+      <soap:address location="https://opendata.camara.cl/wscamaradiputados.asmx" />
+    </wsdl:port>
+    <wsdl:port name="WSCamaraDiputadosSoap12" binding="tns:WSCamaraDiputadosSoap12">
+      <soap12:address location="https://opendata.camara.cl/wscamaradiputados.asmx" />
+    </wsdl:port>
+    <wsdl:port name="WSCamaraDiputadosHttpGet" binding="tns:WSCamaraDiputadosHttpGet">
+      <http:address location="https://opendata.camara.cl/wscamaradiputados.asmx" />
+    </wsdl:port>
+    <wsdl:port name="WSCamaraDiputadosHttpPost" binding="tns:WSCamaraDiputadosHttpPost">
+      <http:address location="https://opendata.camara.cl/wscamaradiputados.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

@@ -3,7 +3,9 @@
  * Fetches real data from Supabase database
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { getServerSupabase } from '@/lib/supabase/client';
+
+const supabase = getServerSupabase();
 
 /**
  * Fetch real legislative statistics from Supabase
@@ -117,7 +119,6 @@ export async function fetchParlamentarios() {
         const { data: parlamentarios, error } = await supabase
             .from('parliamentarians')
             .select('*')
-            .eq('vigente', true)
             .order('nombre_completo', { ascending: true });
 
         if (error) {

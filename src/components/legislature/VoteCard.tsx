@@ -5,6 +5,8 @@ import { CheckCircle2, XCircle, Clock, Building2, Ticket } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useState } from 'react'
+import { VoteDetailModal } from './VoteDetailModal'
 
 interface VoteCardProps {
     vote: {
@@ -25,6 +27,7 @@ interface VoteCardProps {
 }
 
 export function VoteCard({ vote }: VoteCardProps) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const isApproved = vote.resultado === 'aprobado';
 
     return (
@@ -109,7 +112,26 @@ export function VoteCard({ vote }: VoteCardProps) {
                         />
                     </div>
                 </div>
+
+                {/* New: Detail Button */}
+                <div className="pt-2">
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="w-full py-2 bg-white/5 hover:bg-cyan-500/10 border border-white/5 hover:border-cyan-500/30 rounded-lg text-xs font-bold text-slate-400 hover:text-cyan-400 transition-all duration-300 uppercase tracking-widest flex items-center justify-center gap-2 group/btn"
+                    >
+                        Ver Detalle de Votación
+                        <Ticket className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                </div>
             </div>
+
+            <VoteDetailModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                voteId={vote.id}
+                title={vote.materia}
+                boletin={vote.bill?.boletin}
+            />
         </MotionCard>
     )
 }

@@ -74,7 +74,7 @@ export async function getDiputados() {
                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
                xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
-    <getDiputados_Vigentes xmlns="http://opendata.camara.cl/" />
+    <getDiputados_Vigentes xmlns="http://tempuri.org/" />
   </soap:Body>
 </soap:Envelope>`;
 
@@ -82,7 +82,7 @@ export async function getDiputados() {
         method: 'POST',
         headers: {
             'Content-Type': 'text/xml; charset=utf-8',
-            'SOAPAction': 'http://opendata.camara.cl/getDiputados_Vigentes',
+            'SOAPAction': 'http://tempuri.org/getDiputados_Vigentes',
         },
         body: soapEnvelope,
     });
@@ -102,14 +102,14 @@ export async function getDiputados() {
         };
 
         return {
-            id: getTag('Id'),
+            id: getTag('DIPID') || getTag('Id'), // Support both just in case
             nombre: getTag('Nombre'),
-            apellidoPaterno: getTag('ApellidoPaterno'),
-            apellidoMaterno: getTag('ApellidoMaterno'),
-            partido: getTag('Partido'),
+            apellidoPaterno: getTag('Apellido_Paterno'),
+            apellidoMaterno: getTag('Apellido_Materno'),
+            partido: getTag('Militancia_Actual'), // This might need nested parsing but let's see
             region: getTag('Region'),
             distrito: getTag('Distrito'),
-            email: getTag('Email'),
+            email: getTag('Correo_Electronico'),
         };
     });
 
@@ -125,7 +125,7 @@ export async function getProyectosLey() {
                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
                xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
-    <getProyectos_Ley xmlns="http://opendata.camara.cl/">
+    <getProyectos_Ley xmlns="http://tempuri.org/">
       <fechaInicio>2024-01-01</fechaInicio>
       <fechaTermino>2026-12-31</fechaTermino>
     </getProyectos_Ley>
@@ -136,7 +136,7 @@ export async function getProyectosLey() {
         method: 'POST',
         headers: {
             'Content-Type': 'text/xml; charset=utf-8',
-            'SOAPAction': 'http://opendata.camara.cl/getProyectos_Ley',
+            'SOAPAction': 'http://tempuri.org/getProyectos_Ley',
         },
         body: soapEnvelope,
     });
@@ -172,27 +172,106 @@ export async function getProyectosLey() {
 }
 
 /**
- * Get project tramitación from Senado API
+ * Get detailed individual votes for a specific session ID
  */
-export async function getTramitacion(boletin: string) {
-    const url = `${SENADO_BASE_URL}/tramitacion.php?boletin=${boletin}`;
-    const doc = await fetchXML(url);
+export async function getVotacionDetalle(idVotacion: string) {
+    const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <getVotacion_Detalle xmlns="http://tempuri.org/">
+      <prmVotacionID>${idVotacion}</prmVotacionID>
+    </getVotacion_Detalle>
+  </soap:Body>
+</soap:Envelope>`;
 
-    const tramitesNodes = doc.getElementsByTagName('TRAMITE');
-    const tramites = Array.from(tramitesNodes).map(tramite => {
+    const response = await fetch(`${CAMARA_BASE_URL}/wscamaradiputados.asmx`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': 'http://tempuri.org/getVotacion_Detalle',
+        },
+        body: soapEnvelope,
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const xmlText = await response.text();
+    const doc = parseXML(xmlText);
+
+    const votosNodes = doc.getElementsByTagName('Voto');
+    const votos = Array.from(votosNodes).map(votoNode => {
+        const diputadoNode = votoNode.getElementsByTagName('Diputado')[0];
+        const getDipuTag = (tag: string) => {
+            if (!diputadoNode) return '';
+            const elements = diputadoNode.getElementsByTagName(tag);
+            return elements.length > 0 ? elements[0].textContent || '' : '';
+        };
+
+        const opcionNode = votoNode.getElementsByTagName('Opcion')[0];
+        const opcionValue = opcionNode ? (opcionNode.textContent || '') : '';
+
+        return {
+            parliamentarianId: getDipuTag('DIPID'),
+            opcion: opcionValue,
+        };
+    });
+
+    return votos;
+}
+
+/**
+ * Get voting sessions for a specific bulletin
+ */
+export async function getVotaciones_Boletin(boletin: string) {
+    const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <getVotaciones_Boletin xmlns="http://tempuri.org/">
+      <prmBoletin>${boletin}</prmBoletin>
+    </getVotaciones_Boletin>
+  </soap:Body>
+</soap:Envelope>`;
+
+    const response = await fetch(`${CAMARA_BASE_URL}/wscamaradiputados.asmx`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': 'http://tempuri.org/getVotaciones_Boletin',
+        },
+        body: soapEnvelope,
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const xmlText = await response.text();
+    const doc = parseXML(xmlText);
+
+    const votacionesNodes = doc.getElementsByTagName('Votacion');
+    const votaciones = Array.from(votacionesNodes).map(votNode => {
         const getTag = (tag: string) => {
-            const elements = tramite.getElementsByTagName(tag);
+            const elements = votNode.getElementsByTagName(tag);
             return elements.length > 0 ? elements[0].textContent || '' : '';
         };
 
         return {
-            fecha: getTag('FECHA'),
-            camara: getTag('CAMARA'),
-            etapa: getTag('ETAPA'),
-            descripcion: getTag('DESCRIPCION'),
-            sesion: getTag('SESION'),
+            id: getTag('ID'),
+            boletin: getTag('Boletin'),
+            fecha: getTag('Fecha'),
+            resultado: getTag('Resultado'),
+            aFavor: getTag('TotalAfirmativos'),
+            enContra: getTag('TotalNegativos'),
+            abstencion: getTag('TotalAbstenciones'),
+            ausente: getTag('TotalDispensados'),
         };
     });
 
-    return tramites;
+    return votaciones;
 }
