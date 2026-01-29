@@ -1,116 +1,151 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { retornarComisionesVigentes, retornarSesionesXComisionYAnno } from '@/lib/api/opendata';
+
+export const dynamic = 'force-dynamic';
 
 /**
- * Sync endpoint for committee data
- * Generates realistic committees and links existing parliamentarians
- * POST /api/sync/committees
+ * Sync committees and their recent sessions from OpenData API
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
     try {
-        console.log('🏛️ Starting committee data sync...');
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // 1. Fetch all parliamentarians to link to committees
-        const { data: parliamentarians, error: parlError } = await supabase
-            .from('parliamentarians')
-            .select('id, camara, nombre_completo');
+        const currentYear = new Date().getFullYear();
+        let committeesCount = 0;
+        let sessionsCount = 0;
+        const errors: string[] = [];
 
-        if (parlError) throw parlError;
-        if (!parliamentarians || parliamentarians.length === 0) {
-            return NextResponse.json({ message: 'No parliamentarians found to join committees.' });
-        }
+        // Fetch active committees
+        const comisiones = await retornarComisionesVigentes();
 
-        const stats = {
-            committeesCreated: 0,
-            membershipsCreated: 0,
-            errors: [] as string[]
-        };
+        for (const comision of comisiones) {
+            try {
+                // Upsert committee
+                const { data: committee, error: commitError } = await supabase
+                    .from('committees')
+                    .upsert({
+                        external_id: comision.id,
+                        name: comision.nombre,
+                        short_name: comision.nombreCorto,
+                        description: comision.descripcion,
+                        chamber: comision.camara,
+                        committee_type: comision.tipo,
+                        is_active: comision.activa,
+                        updated_at: new Date().toISOString()
+                    }, {
+                        onConflict: 'external_id'
+                    })
+                    .select()
+                    .single();
 
-        // Define realistic committee names
-        const committeeNames = [
-            'Hacienda',
-            'Relaciones Exteriores',
-            'Constitución, Legislación, Justicia y Reglamento',
-            'Educación',
-            'Salud',
-            'Defensa Nacional',
-            'Obras Públicas',
-            'Agricultura',
-            'Medio Ambiente',
-            'Minería y Energía',
-            'Economía',
-            'Trabajo y Previsión Social',
-            'Vivienda y Urbanismo',
-            'Transportes y Telecomunicaciones',
-            'Seguridad Ciudadana',
-            'Cultura, Artes y Comunicaciones',
-            'Derechos Humanos y Pueblos Originarios',
-            'Mujeres y Equidad de Género',
-            'Deportes y Recreación'
-        ];
-
-        // Create committees for each chamber
-        const chambers: ('camara' | 'senado')[] = ['camara', 'senado'];
-
-        for (const camara of chambers) {
-            const chamberParls = parliamentarians.filter(p => p.camara === camara);
-
-            for (const name of committeeNames) {
-                try {
-                    const externalId = `COM-${camara === 'senado' ? 'S' : 'C'}-${name.substring(0, 3).toUpperCase()}`;
-
-                    const committeeData = {
-                        external_id: externalId,
-                        nombre: `Comisión de ${name}`,
-                        nombre_corto: name,
-                        tipo: 'permanente',
-                        camara: camara,
-                        descripcion: `Comisión permanente de ${name} de la ${camara === 'senado' ? 'Corporación del Senado' : 'Cámara de Diputados'}.`
-                    };
-
-                    const { data: committee, error: commError } = await supabase
-                        .from('committees')
-                        .upsert(committeeData, { onConflict: 'external_id' })
-                        .select()
-                        .single();
-
-                    if (commError) throw commError;
-                    stats.committeesCreated++;
-
-                    // Assign random members from the same chamber
-                    // Typically 7-13 members per committee
-                    const memberCount = Math.floor(Math.random() * 7) + 7;
-                    const shuffledParls = [...chamberParls].sort(() => 0.5 - Math.random());
-                    const selectedMembers = shuffledParls.slice(0, Math.min(memberCount, chamberParls.length));
-
-                    for (let i = 0; i < selectedMembers.length; i++) {
-                        const member = selectedMembers[i];
-                        const membershipData = {
-                            committee_id: committee.id,
-                            parliamentarian_id: member.id,
-                            rol: i === 0 ? 'presidente' : 'integrante'
-                        };
-
-                        const { error: memError } = await supabase
-                            .from('committee_members')
-                            .upsert(membershipData, { onConflict: 'committee_id,parliamentarian_id' });
-
-                        if (!memError) stats.membershipsCreated++;
-                    }
-
-                } catch (err: any) {
-                    stats.errors.push(`Error on ${name} (${camara}): ${err.message}`);
+                if (commitError) {
+                    errors.push(`Committee ${comision.nombre}: ${commitError.message}`);
+                    continue;
                 }
+
+                committeesCount++;
+
+                // Fetch sessions for current year
+                try {
+                    const sesiones = await retornarSesionesXComisionYAnno(comision.id, currentYear);
+
+                    for (const sesion of sesiones) {
+                        const { error: sessionError } = await supabase
+                            .from('committee_sessions')
+                            .upsert({
+                                committee_id: committee.id,
+                                external_id: sesion.id,
+                                session_number: sesion.numero,
+                                session_date: sesion.fecha,
+                                session_type: sesion.tipo,
+                                status: sesion.estado,
+                                description: sesion.descripcion,
+                                location: sesion.ubicacion,
+                                updated_at: new Date().toISOString()
+                            }, {
+                                onConflict: 'external_id'
+                            });
+
+                        if (!sessionError) {
+                            sessionsCount++;
+                        }
+                    }
+                } catch (sessionErr: any) {
+                    // Sessions might not be available for all committees
+                    console.log(`No sessions for ${comision.nombre}:`, sessionErr.message);
+                }
+
+            } catch (err: any) {
+                errors.push(`Committee ${comision.nombre}: ${err.message}`);
             }
         }
 
+        // Update sync status
+        await supabase
+            .from('sync_status')
+            .upsert({
+                sync_type: 'committees',
+                last_sync_at: new Date().toISOString(),
+                status: errors.length > 0 ? 'completed_with_errors' : 'completed',
+                records_synced: committeesCount,
+                error_message: errors.length > 0 ? errors.join('; ') : null,
+                metadata: {
+                    committees_count: committeesCount,
+                    sessions_count: sessionsCount,
+                    year: currentYear
+                }
+            }, {
+                onConflict: 'sync_type'
+            });
+
         return NextResponse.json({
-            success: true,
-            summary: stats
+            success: errors.length === 0,
+            committees_synced: committeesCount,
+            sessions_synced: sessionsCount,
+            year: currentYear,
+            errors: errors.length > 0 ? errors : undefined
         });
 
-    } catch (error: any) {
-        console.error('❌ Committee sync error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 });
+    }
+}
+
+/**
+ * Get sync status for committees
+ */
+export async function GET() {
+    try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const { data: status } = await supabase
+            .from('sync_status')
+            .select('*')
+            .eq('sync_type', 'committees')
+            .single();
+
+        const { count: committeesCount } = await supabase
+            .from('committees')
+            .select('*', { count: 'exact', head: true });
+
+        const { count: sessionsCount } = await supabase
+            .from('committee_sessions')
+            .select('*', { count: 'exact', head: true });
+
+        return NextResponse.json({
+            last_sync: status?.last_sync_at,
+            status: status?.status,
+            committees_count: committeesCount,
+            sessions_count: sessionsCount,
+            metadata: status?.metadata
+        });
+
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

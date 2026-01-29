@@ -1,48 +1,60 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/committees
- * Fetches committee records from Supabase with member counts
+ * Get all committees with optional filters
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const camara = searchParams.get('camara'); // 'camara', 'senado', 'mixta'
-        const tipo = searchParams.get('tipo'); // 'permanente', 'especial'
+        const chamber = searchParams.get('chamber'); // 'camara', 'senado', 'mixta'
+        const active = searchParams.get('active'); // 'true' or 'false'
+
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         let query = supabase
             .from('committees')
             .select(`
                 *,
-                members:committee_members (
-                    count
+                committee_members (
+                    id,
+                    role,
+                    is_active,
+                    parliamentarian:parliamentarians (
+                        id,
+                        nombre_completo,
+                        partido,
+                        camara,
+                        region
+                    )
                 )
             `)
-            .order('nombre', { ascending: true });
+            .order('name');
 
-        if (camara && camara !== 'all') {
-            query = query.eq('camara', camara);
+        if (chamber) {
+            query = query.eq('chamber', chamber);
         }
 
-        if (tipo && tipo !== 'all') {
-            query = query.eq('tipo', tipo);
+        if (active !== null) {
+            query = query.eq('is_active', active === 'true');
         }
 
         const { data, error } = await query;
 
-        if (error) throw error;
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
 
-        // Map data to include member count properly
-        const committees = data.map(c => ({
-            ...c,
-            memberCount: c.members[0]?.count || 0,
-            members: undefined // Remove the specific members count object from response
-        }));
+        return NextResponse.json({
+            committees: data,
+            total: data?.length || 0
+        });
 
-        return NextResponse.json(committees);
-    } catch (error: any) {
-        console.error('❌ Error fetching committees:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }
