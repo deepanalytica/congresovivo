@@ -16,10 +16,30 @@ export default function ProyectoDetailPage({ params }: { params: { id: string } 
     React.useEffect(() => {
         async function loadBill() {
             try {
-                const res = await fetch('/api/bills');
-                const bills = await res.json();
-                const foundBill = bills.find((b: any) => b.id === params.id || b.boletin === params.id);
-                setBill(foundBill);
+                // Fetch from our API that wraps Supabase
+                const res = await fetch(`/api/bills`);
+                const { bills } = await res.json();
+
+                // Find bill by ID or bulletin number
+                const foundBill = bills?.find((b: any) =>
+                    b.id === params.id || b.boletin === params.id
+                );
+
+                if (foundBill) {
+                    // Map database schema to frontend needs
+                    setBill({
+                        ...foundBill,
+                        titulo: foundBill.titulo,
+                        boletin: foundBill.boletin,
+                        estado: (foundBill.estado || 'ingreso').toLowerCase(),
+                        urgencia: (foundBill.urgencia || 'sin').toLowerCase(),
+                        camaraOrigen: foundBill.camara_origen,
+                        iniciativa: foundBill.iniciativa,
+                        fechaIngreso: foundBill.fecha_ingreso,
+                        etapaActual: foundBill.etapa_actual || 'En tramitación',
+                        fechaUltimaModificacion: foundBill.updated_at
+                    });
+                }
             } catch (error) {
                 console.error('Error loading bill:', error);
             } finally {

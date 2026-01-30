@@ -1,10 +1,11 @@
-import soap from 'soap';
+import { DOMParser } from 'xmldom';
 
-const CAMARA_WSDL_URL = 'https://opendata.camara.cl/wscamaradiputados.asmx?WSDL';
+const CAMARA_BASE_URL = 'https://opendata.camara.cl';
 
 /**
  * OpenData API Client for Chilean Chamber of Deputies
  * Based on https://www.camara.cl/transparencia/datosAbiertos.aspx
+ * Uses native fetch + xmldom to avoid 'soap' dependency issues
  */
 
 // =====================================================
@@ -41,17 +42,47 @@ export interface Ministerio {
 }
 
 /**
+ * Execute SOAP request to Cámara OpenData
+ */
+async function executeCamaraSoap(action: string, body: string): Promise<Document> {
+    const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    ${body}
+  </soap:Body>
+</soap:Envelope>`;
+
+    const response = await fetch(`${CAMARA_BASE_URL}/wscamaradiputados.asmx`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': `http://tempuri.org/${action}`,
+        },
+        body: soapEnvelope,
+    });
+
+    if (!response.ok) {
+        throw new Error(`SOAP error! status: ${response.status}`);
+    }
+
+    const xmlText = await response.text();
+    const parser = new DOMParser();
+    return parser.parseFromString(xmlText, 'text/xml');
+}
+
+/**
  * Get all electoral districts (28 total)
  */
 export async function retornarDistritos(): Promise<Distrito[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarDistritosAsync({});
-
-        const distritosXML = result.retornarDistritosResult;
-        // Parse XML to extract distrito data
-        const distritos = parseDistritosXML(distritosXML);
-        return distritos;
+        const doc = await executeCamaraSoap('retornarDistritos', `
+            <retornarDistritos xmlns="http://tempuri.org/" />
+        `);
+        const resultNode = doc.getElementsByTagName('retornarDistritosResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseDistritosXML(xmlContent);
     } catch (error) {
         console.error('Error fetching distritos:', error);
         throw error;
@@ -63,12 +94,12 @@ export async function retornarDistritos(): Promise<Distrito[]> {
  */
 export async function retornarRegiones(): Promise<Region[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarRegionesAsync({});
-
-        const regionesXML = result.retornarRegionesResult;
-        const regiones = parseRegionesXML(regionesXML);
-        return regiones;
+        const doc = await executeCamaraSoap('retornarRegiones', `
+            <retornarRegiones xmlns="http://tempuri.org/" />
+        `);
+        const resultNode = doc.getElementsByTagName('retornarRegionesResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseRegionesXML(xmlContent);
     } catch (error) {
         console.error('Error fetching regiones:', error);
         throw error;
@@ -80,12 +111,12 @@ export async function retornarRegiones(): Promise<Region[]> {
  */
 export async function retornarComunas(): Promise<Comuna[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarComunasAsync({});
-
-        const comunasXML = result.retornarComunasResult;
-        const comunas = parseComunasXML(comunasXML);
-        return comunas;
+        const doc = await executeCamaraSoap('retornarComunas', `
+            <retornarComunas xmlns="http://tempuri.org/" />
+        `);
+        const resultNode = doc.getElementsByTagName('retornarComunasResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseComunasXML(xmlContent);
     } catch (error) {
         console.error('Error fetching comunas:', error);
         throw error;
@@ -97,12 +128,12 @@ export async function retornarComunas(): Promise<Comuna[]> {
  */
 export async function retornarProvincias(): Promise<Provincia[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarProvinciasAsync({});
-
-        const provinciasXML = result.retornarProvinciasResult;
-        const provincias = parseProvinciasXML(provinciasXML);
-        return provincias;
+        const doc = await executeCamaraSoap('retornarProvincias', `
+            <retornarProvincias xmlns="http://tempuri.org/" />
+        `);
+        const resultNode = doc.getElementsByTagName('retornarProvinciasResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseProvinciasXML(xmlContent);
     } catch (error) {
         console.error('Error fetching provincias:', error);
         throw error;
@@ -114,12 +145,12 @@ export async function retornarProvincias(): Promise<Provincia[]> {
  */
 export async function retornarMinisterios(): Promise<Ministerio[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarMinisteriosAsync({});
-
-        const ministeriosXML = result.retornarMinisteriosResult;
-        const ministerios = parseMinisteriosXML(ministeriosXML);
-        return ministerios;
+        const doc = await executeCamaraSoap('retornarMinisterios', `
+            <retornarMinisterios xmlns="http://tempuri.org/" />
+        `);
+        const resultNode = doc.getElementsByTagName('retornarMinisteriosResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseMinisteriosXML(xmlContent);
     } catch (error) {
         console.error('Error fetching ministerios:', error);
         throw error;
@@ -131,17 +162,16 @@ export async function retornarMinisterios(): Promise<Ministerio[]> {
 // =====================================================
 
 function parseDistritosXML(xml: string): Distrito[] {
-    // Simple XML parsing - adjust based on actual structure
     const distritos: Distrito[] = [];
-    const matches = xml.matchAll(/<Distrito>(.*?)<\/Distrito>/gs);
+    const matches = xml.matchAll(/<Distrito>([\s\S]*?)<\/Distrito>/g);
 
     for (const match of matches) {
         const distritoXML = match[1];
-        const codigo = extractXMLValue(distritoXML, 'Codigo');
-        const nombre = extractXMLValue(distritoXML, 'Nombre');
-        const diputados = parseInt(extractXMLValue(distritoXML, 'NumeroDiputados') || '0');
-
-        distritos.push({ codigo, nombre, diputados });
+        distritos.push({
+            codigo: extractXMLValue(distritoXML, 'Codigo'),
+            nombre: extractXMLValue(distritoXML, 'Nombre'),
+            diputados: parseInt(extractXMLValue(distritoXML, 'NumeroDiputados') || '0')
+        });
     }
 
     return distritos;
@@ -149,14 +179,14 @@ function parseDistritosXML(xml: string): Distrito[] {
 
 function parseRegionesXML(xml: string): Region[] {
     const regiones: Region[] = [];
-    const matches = xml.matchAll(/<Region>(.*?)<\/Region>/gs);
+    const matches = xml.matchAll(/<Region>([\s\S]*?)<\/Region>/g);
 
     for (const match of matches) {
         const regionXML = match[1];
-        const codigo = extractXMLValue(regionXML, 'Codigo');
-        const nombre = extractXMLValue(regionXML, 'Nombre');
-
-        regiones.push({ codigo, nombre });
+        regiones.push({
+            codigo: extractXMLValue(regionXML, 'Codigo'),
+            nombre: extractXMLValue(regionXML, 'Nombre')
+        });
     }
 
     return regiones;
@@ -164,16 +194,16 @@ function parseRegionesXML(xml: string): Region[] {
 
 function parseComunasXML(xml: string): Comuna[] {
     const comunas: Comuna[] = [];
-    const matches = xml.matchAll(/<Comuna>(.*?)<\/Comuna>/gs);
+    const matches = xml.matchAll(/<Comuna>([\s\S]*?)<\/Comuna>/g);
 
     for (const match of matches) {
         const comunaXML = match[1];
-        const codigo = extractXMLValue(comunaXML, 'Codigo');
-        const nombre = extractXMLValue(comunaXML, 'Nombre');
-        const provincia = extractXMLValue(comunaXML, 'Provincia');
-        const region = extractXMLValue(comunaXML, 'Region');
-
-        comunas.push({ codigo, nombre, provincia, region });
+        comunas.push({
+            codigo: extractXMLValue(comunaXML, 'Codigo'),
+            nombre: extractXMLValue(comunaXML, 'Nombre'),
+            provincia: extractXMLValue(comunaXML, 'Provincia'),
+            region: extractXMLValue(comunaXML, 'Region')
+        });
     }
 
     return comunas;
@@ -181,15 +211,15 @@ function parseComunasXML(xml: string): Comuna[] {
 
 function parseProvinciasXML(xml: string): Provincia[] {
     const provincias: Provincia[] = [];
-    const matches = xml.matchAll(/<Provincia>(.*?)<\/Provincia>/gs);
+    const matches = xml.matchAll(/<Provincia>([\s\S]*?)<\/Provincia>/g);
 
     for (const match of matches) {
         const provinciaXML = match[1];
-        const codigo = extractXMLValue(provinciaXML, 'Codigo');
-        const nombre = extractXMLValue(provinciaXML, 'Nombre');
-        const region = extractXMLValue(provinciaXML, 'Region');
-
-        provincias.push({ codigo, nombre, region });
+        provincias.push({
+            codigo: extractXMLValue(provinciaXML, 'Codigo'),
+            nombre: extractXMLValue(provinciaXML, 'Nombre'),
+            region: extractXMLValue(provinciaXML, 'Region')
+        });
     }
 
     return provincias;
@@ -197,14 +227,14 @@ function parseProvinciasXML(xml: string): Provincia[] {
 
 function parseMinisteriosXML(xml: string): Ministerio[] {
     const ministerios: Ministerio[] = [];
-    const matches = xml.matchAll(/<Ministerio>(.*?)<\/Ministerio>/gs);
+    const matches = xml.matchAll(/<Ministerio>([\s\S]*?)<\/Ministerio>/g);
 
     for (const match of matches) {
         const ministerioXML = match[1];
-        const codigo = extractXMLValue(ministerioXML, 'Codigo');
-        const nombre = extractXMLValue(ministerioXML, 'Nombre');
-
-        ministerios.push({ codigo, nombre });
+        ministerios.push({
+            codigo: extractXMLValue(ministerioXML, 'Codigo'),
+            nombre: extractXMLValue(ministerioXML, 'Nombre')
+        });
     }
 
     return ministerios;
@@ -214,7 +244,7 @@ function parseMinisteriosXML(xml: string): Ministerio[] {
  * Extract value from XML tag
  */
 function extractXMLValue(xml: string, tag: string): string {
-    const regex = new RegExp(`<${tag}>(.*?)<\/${tag}>`, 's');
+    const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
     const match = xml.match(regex);
     return match ? match[1].trim() : '';
 }

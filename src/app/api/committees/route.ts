@@ -18,8 +18,11 @@ export async function GET(request: Request) {
 
         let query = supabase
             .from('committees')
-            .select(`
+            .select(
+                `
                 *,
+                /*
+                // Temporarily disabled due to relationship error
                 committee_members (
                     id,
                     role,
@@ -32,11 +35,13 @@ export async function GET(request: Request) {
                         region
                     )
                 )
-            `)
-            .order('name');
+                */
+                `
+            )
+            .order('nombre');
 
         if (chamber) {
-            query = query.eq('chamber', chamber);
+            query = query.eq('camara', chamber);
         }
 
         if (active !== null) {

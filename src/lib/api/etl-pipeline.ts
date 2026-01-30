@@ -1,90 +1,79 @@
-/**
- * ETL Pipeline - Extract, Transform, Load
- * Fetches data from Chilean Congress Open Data APIs and stores in Supabase
- */
-
-import { getSenadores, getDiputados, getProyectosLey } from './opendata-client';
+import { retornarProyectosLeyXAnno, retornarAutoresProyecto, retornarDiputados, retornarSenadoresVigentes, retornarProyectoLeySenate } from './opendata';
 import { partyToIdeology } from '@/lib/design-tokens';
 import { getServerSupabase } from '@/lib/supabase/client';
 
 /**
+ * Normalizes legislative status from OpenData to internal keys
+ */
+export function normalizeStatus(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s.includes('tramitaci')) return 'en_tramite';
+    if (s.includes('aprobado') || s.includes('promulgado') || s.includes('publicado')) return 'aprobado';
+    if (s.includes('rechazado')) return 'rechazado';
+    if (s.includes('archivado')) return 'archivado';
+    if (s.includes('retirado')) return 'retirado';
+    return 'en_tramite';
+}
+
+/**
  * ETL Job: Sync Parliamentarians
- * Run this every 24 hours (parliamentarians don't change often)
  */
 export async function syncParlamentarians() {
     console.log('🔄 ETL: Starting parliamentarian sync...');
-
     try {
-        // 1. EXTRACT: Fetch from official APIs
         const [senadores, diputados] = await Promise.all([
-            getSenadores(),
-            getDiputados(),
+            retornarSenadoresVigentes(),
+            retornarDiputados(),
         ]);
 
-        console.log(`📥 Extracted ${senadores.length} senators, ${diputados.length} deputies`);
-
-        // 2. TRANSFORM: Normalize data
         const allParlamentarians = [
             ...senadores.map(s => ({
                 external_id: `SEN-${s.id}`,
-                nombre_completo: `${s.nombre} ${s.apellidoPaterno} ${s.apellidoMaterno}`,
+                nombre_completo: s.nombre_completo,
                 nombre: s.nombre,
-                apellido_paterno: s.apellidoPaterno,
-                apellido_materno: s.apellidoMaterno,
+                apellido_paterno: s.apellido_paterno,
+                apellido_materno: s.apellido_materno,
                 partido: s.partido,
                 ideologia: partyToIdeology[s.partido] || 'independent',
                 camara: 'senado' as const,
                 region: s.region,
-                circunscripcion: s.circunscripcion,
                 email: s.email,
-                telefono: s.telefono,
                 vigente: true,
                 synced_at: new Date().toISOString(),
             })),
             ...diputados.map(d => ({
                 external_id: `DIP-${d.id}`,
-                nombre_completo: `${d.nombre} ${d.apellidoPaterno} ${d.apellidoMaterno}`,
+                nombre_completo: d.nombre_completo,
                 nombre: d.nombre,
-                apellido_paterno: d.apellidoPaterno,
-                apellido_materno: d.apellidoMaterno,
+                apellido_paterno: d.apellido_paterno,
+                apellido_materno: d.apellido_materno,
                 partido: d.partido,
                 ideologia: partyToIdeology[d.partido] || 'independent',
                 camara: 'camara' as const,
                 region: d.region,
                 distrito: d.distrito,
-                email: d.email,
+                email: d.email || '',
                 vigente: true,
                 synced_at: new Date().toISOString(),
             })),
         ];
 
-        // 3. LOAD: Store in Supabase
+        // Deduplicate parliamentarians by external_id
+        const seenParls = new Set<string>();
+        const uniqueParls = allParlamentarians.filter(p => {
+            if (seenParls.has(p.external_id)) return false;
+            seenParls.add(p.external_id);
+            return true;
+        });
+
         const supabase = getServerSupabase();
-
-        console.log(`💾 Storing ${allParlamentarians.length} parliamentarians in database...`);
-
         const { data, error } = await supabase
             .from('parliamentarians')
-            .upsert(allParlamentarians, {
-                onConflict: 'external_id',
-                ignoreDuplicates: false
-            })
+            .upsert(uniqueParls, { onConflict: 'external_id' })
             .select();
 
-        if (error) {
-            console.error('❌ Database error:', error);
-            throw error;
-        }
-
-        console.log(`✅ Successfully synced ${data?.length || allParlamentarians.length} parliamentarians`);
-
-        return {
-            success: true,
-            count: data?.length || allParlamentarians.length,
-            senators: senadores.length,
-            deputies: diputados.length
-        };
-
+        if (error) throw error;
+        return { success: true, count: data?.length || allParlamentarians.length };
     } catch (error) {
         console.error('❌ ETL Error (Parliamentarians):', error);
         throw error;
@@ -92,112 +81,120 @@ export async function syncParlamentarians() {
 }
 
 /**
- * ETL Job: Sync Legislative Bills
- * Run this every 1 hour during active session, every 6 hours otherwise
+ * ETL Job: Sync Legislative Bills for a specific year
  */
-export async function syncBills() {
-    console.log('🔄 ETL: Starting bills sync...');
+/**
+ * ETL Job: Sync Bills by Range (Senate API Strategy)
+ */
+export async function syncBillsByRange(start: number, end: number) {
+    console.log(`🔄 ETL: Starting Range Sync ${start}-${end}...`);
+    const supabase = getServerSupabase();
+    let billsCount = 0;
 
-    try {
-        // 1. EXTRACT
-        const proyectos = await getProyectosLey();
-        console.log(`📥 Extracted ${proyectos.length} bills`);
+    const batchSize = 10;
+    const total = end - start + 1;
 
-        // 2. TRANSFORM
-        const bills = proyectos.map(p => {
-            // Map API stages to our types
-            const stageMap: Record<string, string> = {
-                'Ingreso': 'ingreso',
-                'Primer trámite constitucional': 'comision',
-                'Segundo trámite constitucional': 'segundo_tramite',
-                'Tercer trámite constitucional': 'comision_mixta',
-                'Tribunal Constitucional': 'tribunal_constitucional',
-                'Aprobado': 'aprobado',
-                'Promulgado': 'promulgado',
-                'Publicado': 'promulgado',
-                'Rechazado': 'rechazado',
-                'Archivado': 'archivado',
-            };
+    // Create array of bulletins to check
+    const bulletins = Array.from({ length: total }, (_, i) => start + i);
 
-            const urgencyMap: Record<string, string> = {
-                'Sin urgencia': 'sin',
-                'Simple': 'simple',
-                'Suma': 'suma',
-                'Discusión inmediata': 'inmediata',
-            };
+    for (let i = 0; i < bulletins.length; i += batchSize) {
+        const batch = bulletins.slice(i, i + batchSize);
+        console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(bulletins.length / batchSize)}...`);
 
-            return {
-                external_id: p.id,
-                boletin: p.boletin,
-                titulo: p.titulo,
-                estado: stageMap[p.etapa] || 'ingreso',
-                camara_origen: (p.camara.toLowerCase() === 'senado' ? 'senado' : 'camara') as 'senado' | 'camara',
-                urgencia: urgencyMap[p.urgencia] || 'sin',
-                fecha_ingreso: p.fechaIngreso,
-                fecha_ultima_modificacion: p.fechaIngreso, // Will be updated from tramitacion
-                etapa_actual: p.subEtapa || p.etapa,
-                iniciativa: p.iniciativa.toLowerCase().includes('ejecut') ? 'ejecutivo' : 'parlamentaria',
-                synced_at: new Date().toISOString(),
-            };
-        });
+        // Serial execution within batch to control rate
+        for (const num of batch) {
+            try {
+                const bulletinId = `${num}-00`; // Senate fetcher cleans this anyway
+                const p = await retornarProyectoLeySenate(bulletinId);
 
-        // 3. LOAD: Store in Supabase
-        const supabase = getServerSupabase();
+                if (!p) continue; // Bulletin not found or empty
 
-        console.log(`💾 Storing ${bills.length} bills in database...`);
+                const billData = {
+                    external_id: p.id,
+                    boletin: p.boletin,
+                    titulo: p.titulo.substring(0, 255),
+                    resumen: p.resumen,
+                    // bill_type: p.tipo, // Column missing
+                    camara_origen: (p.camaraOrigen && p.camaraOrigen.toLowerCase().includes('diputados')) ? 'camara' : 'senado',
+                    iniciativa: p.tipoIniciativa,
+                    estado: normalizeStatus(p.estado),
+                    // etapa_actual: p.etapa, // Column missing
+                    // sub_etapa: p.subEtapa, // Column missing
+                    fecha_ingreso: p.fechaIngreso,
+                    // fecha_publicacion: p.fechaPublicacion, // Column missing
+                    // ley_numero: p.numeroLey, // Column missing
+                    urgencia: p.urgencia || 'sin',
+                    fecha_ultima_modificacion: new Date().toISOString() // updated_at -> fecha_ultima_modificacion
+                };
 
-        const { data, error } = await supabase
-            .from('bills')
-            .upsert(bills, {
-                onConflict: 'boletin',
-                ignoreDuplicates: false
-            })
-            .select();
+                // Upsert Bill
+                const { data: upsertedBill, error: upsertError } = await supabase
+                    .from('bills')
+                    .upsert(billData, { onConflict: 'boletin' })
+                    .select('id')
+                    .single();
 
-        if (error) {
-            console.error('❌ Database error:', error);
-            throw error;
+                if (upsertError) throw upsertError;
+
+                if (upsertedBill) {
+                    billsCount++;
+                    // Sync Authors from the bill object itself
+                    if (p.autores && p.autores.length > 0) {
+                        for (const autor of p.autores) {
+                            const { data: parl } = await supabase
+                                .from('parliamentarians')
+                                .select('id')
+                                .ilike('nombre_completo', `%${autor.nombre}%`)
+                                .limit(1)
+                                .maybeSingle();
+
+                            if (parl) {
+                                await supabase
+                                    .from('bill_authors')
+                                    .upsert({ bill_id: upsertedBill.id, parliamentarian_id: parl.id },
+                                        { onConflict: 'bill_id,parliamentarian_id' });
+                            }
+                        }
+                    }
+                }
+            } catch (err: any) {
+                console.error(`💥 Error processing bulletin ${num}:`, err.message);
+            }
+            // Minor throttle to respect Senate API
+            await new Promise(r => setTimeout(r, 100));
         }
-
-        console.log(`✅ Successfully synced ${data?.length || bills.length} bills`);
-
-        return {
-            success: true,
-            count: data?.length || bills.length
-        };
-
-    } catch (error) {
-        console.error('❌ ETL Error (Bills):', error);
-        throw error;
     }
+    return { success: true, count: billsCount };
 }
 
 /**
- * Master ETL Job - Run all syncs
+ * ETL Job: Sync Legislative Bills for a specific year
  */
-export async function runFullSync() {
-    console.log('🚀 Starting full ETL sync...');
+export async function syncBills(year: number = new Date().getFullYear()) {
+    console.log(`🔄 ETL: Starting bills sync for year ${year}...`);
 
-    const results = {
-        parliamentarians: 0,
-        bills: 0,
-        errors: [] as string[],
-    };
+    if (year === 2025) return syncBillsByRange(17200, 18000);
+    if (year === 2024) return syncBillsByRange(16400, 17300);
+    if (year === 2023) return syncBillsByRange(15500, 16500);
+    if (year === 2022) return syncBillsByRange(14500, 15500);
+    if (year === 2021) return syncBillsByRange(13500, 14500);
+    if (year === 2020) return syncBillsByRange(12500, 13500);
+    if (year === 2019) return syncBillsByRange(11500, 12500);
+    if (year === 2018) return syncBillsByRange(10500, 11500);
 
+    return { success: false, error: "Legacy sync not supported for this year via direct call" };
+}
+
+/**
+ * Master ETL Job
+ */
+export async function runFullSync(year: number = new Date().getFullYear()) {
+    const results: any = { year };
     try {
-        const parlResult = await syncParlamentarians();
-        results.parliamentarians = parlResult.count;
-    } catch (error) {
-        results.errors.push(`Parliamentarians sync failed: ${error}`);
+        results.parliamentarians = await syncParlamentarians();
+        results.bills = await syncBills(year);
+        return { success: true, results };
+    } catch (error: any) {
+        return { success: false, error: error.message };
     }
-
-    try {
-        const billsResult = await syncBills();
-        results.bills = billsResult.count;
-    } catch (error) {
-        results.errors.push(`Bills sync failed: ${error}`);
-    }
-
-    console.log('✅ ETL sync completed:', results);
-    return results;
 }

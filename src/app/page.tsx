@@ -9,6 +9,11 @@ import { ActivityFeed } from '@/components/legislature/ActivityFeed'
 import { FileText, CheckCircle2, Vote, Calendar, Users, TrendingUp, Search, Bell, Settings, BarChart3, Map, User, Menu, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { VoteBreakdownChart } from '@/components/visualization/VoteBreakdownChart'
+import { LegislativeTimeline } from '@/components/visualization/LegislativeTimeline'
+import { Button } from '@/components/ui/button'
+
+import { MobileMenu } from '@/components/ui/MobileMenu'
 
 export default function HomePage() {
     const [stats, setStats] = React.useState<any>(null);
@@ -27,7 +32,8 @@ export default function HomePage() {
                 const billsData = await billsRes.json();
 
                 setStats(statsData);
-                setBills(billsData.slice(0, 4));
+                // Handle the wrap { bills: [...] } from the new API
+                setBills((billsData.bills || billsData).slice(0, 4));
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -62,22 +68,20 @@ export default function HomePage() {
         );
     }
 
-    // Mock activities for now
-    const mockActivities = [
-        {
-            id: '1',
-            tipo: 'bill_update' as const,
-            titulo: 'Proyecto sobre IA aprobado en Sala',
-            fecha: new Date(),
-            descripcion: 'Proyecto aprobado en sala',
-            entidad: {
-                tipo: 'bill' as const,
-                id: 'bill-1',
-                nombre: 'Proyecto sobre IA'
-            },
-            relevancia: 'alta' as const
+    const activities = bills.slice(0, 5).map(bill => ({
+        id: bill.id,
+        tipo: 'bill_update' as const,
+        titulo: `${bill.boletin}: ${bill.titulo?.substring(0, 60)}...`,
+        fecha: new Date(bill.fecha_ingreso),
+        descripcion: `Nuevo proyecto ingresado al ${bill.camara_origen === 'senado' ? 'Senado' : 'Cámara'}`,
+        entidad: {
+            tipo: 'bill' as const,
+            id: bill.id,
+            nombre: bill.boletin
         },
-    ];
+        relevancia: 'alta' as const
+    }));
+
 
     return (
         <div className="min-h-screen relative flex flex-col md:flex-row">
@@ -85,7 +89,7 @@ export default function HomePage() {
             {/* Mobile Header */}
             <div className="md:hidden fixed top-0 w-full z-50 glass-panel p-4 flex justify-between items-center">
                 <h1 className="font-outfit font-bold text-xl tracking-tight text-white">CONGRESO<span className="text-cyan-400">VIVO</span></h1>
-                <button className="p-2 rounded-lg bg-white/10"><Menu className="text-white" /></button>
+                <MobileMenu />
             </div>
 
             {/* Sidebar Navigation */}
@@ -165,81 +169,120 @@ export default function HomePage() {
                             color="cyan"
                         />
                         <StatCard
-                            label="Comisiones"
-                            value={stats.comisionesActivas || 38}
-                            icon={<Calendar className="w-6 h-6 text-purple-400" />}
+                            label="Rechazados"
+                            value={stats.proyectosRechazados || 0}
+                            icon={<TrendingUp className="w-6 h-6 text-red-400" />}
                             color="purple"
                         />
                     </div>
 
+                    {/* Voting Analysis Section (New Premium Content) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <VoteBreakdownChart
+                            yesCount={84}
+                            noCount={42}
+                            abstentionCount={12}
+                            absentCount={15}
+                        />
+                        <div className="relative group p-8 rounded-2xl bg-[#0a0e1a]/80 backdrop-blur-xl border border-white/10 flex flex-col justify-center">
+                            <h3 className="font-outfit text-3xl font-bold text-white mb-4">Análisis de Votación en Sala</h3>
+                            <p className="text-slate-400 text-lg mb-6 leading-relaxed">
+                                Visualiza en tiempo real el comportamiento de voto por bancada, partido e individualmente.
+                                Identifica patrones de consenso y disidencia en las leyes más relevantes de Chile.
+                            </p>
+                            <div className="flex gap-4">
+                                <Button variant="premium" className="px-8">Explorar Filtros</Button>
+                                <Button variant="outline">Descargar Reporte</Button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Content Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
 
                         {/* Featured Projects */}
                         <div className="lg:col-span-2 space-y-8">
                             <div className="flex items-center justify-between">
-                                <h3 className="font-outfit text-2xl font-bold flex items-center gap-2">
-                                    <TrendingUp className="text-cyan-400" /> Proyectos Recientes
+                                <h3 className="font-outfit text-2xl font-bold flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-orange-500/20">
+                                        <TrendingUp className="text-orange-400 w-6 h-6" />
+                                    </div>
+                                    Proyectos Recientes
                                 </h3>
-                                <Link href="/proyectos" className="text-sm text-slate-400 hover:text-white transition-colors">
-                                    Ver todos →
+                                <Link href="/proyectos" className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 group">
+                                    Ver todos
+                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </Link>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {bills.map((bill, i) => (
-                                    <motion.div
+                                    <BillCard
                                         key={bill.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.1 }}
-                                    >
-                                        <BillCard bill={bill} />
-                                    </motion.div>
+                                        id={bill.id}
+                                        boletin={bill.boletin}
+                                        titulo={bill.titulo}
+                                        estado={bill.estado}
+                                        etapa={bill.etapa_actual}
+                                        urgencia={bill.urgencia}
+                                        fechaIngreso={bill.fecha_ingreso}
+                                        camaraOrigen={bill.camara_origen}
+                                        tipoIniciativa={bill.iniciativa}
+                                        autores={bill.bill_authors?.length || 0}
+                                    />
                                 ))}
                             </div>
 
                             {/* Activity Feed */}
-                            <MotionCard className="p-8">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
-                                    <h3 className="font-outfit text-2xl font-bold">Actividad Reciente</h3>
+                            <div className="relative group">
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-1000"></div>
+                                <div className="relative p-8 rounded-2xl bg-[#0a0e1a]/80 backdrop-blur-xl border border-white/10">
+                                    <div className="flex items-center gap-4 mb-8">
+                                        <div className="w-1.5 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+                                        <h3 className="font-outfit text-2xl font-bold text-white">Actividad Reciente</h3>
+                                    </div>
+                                    <ActivityFeed activities={activities} />
                                 </div>
-                                <ActivityFeed activities={mockActivities} />
-                            </MotionCard>
+                            </div>
                         </div>
 
                         {/* Sidebar */}
                         <div className="space-y-8">
                             {/* Chamber Distribution */}
-                            <MotionCard className="p-6">
-                                <h3 className="font-outfit text-xl font-bold mb-6 flex items-center gap-2">
-                                    <BarChart3 className="text-emerald-400" /> Carga Legislativa
-                                </h3>
-                                <div className="space-y-6">
-                                    {stats.camaraStats.map((stat: any) => (
-                                        <div key={stat.camara} className="space-y-2">
-                                            <div className="flex justify-between text-sm font-medium">
-                                                <span className="text-slate-300 capitalize">{stat.camara === 'camara' ? 'Cámara Diputados' : 'Senado'}</span>
-                                                <span className="text-slate-500">{stat.proyectos} proyectos</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                <motion.div
-                                                    className={`h-full ${stat.camara === 'camara' ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-rose-500 to-orange-400'}`}
-                                                    initial={{ width: 0 }}
-                                                    whileInView={{ width: `${(stat.proyectos / stats.totalProyectos) * 100}%` }}
-                                                    transition={{ duration: 1.5, ease: "circOut" }}
-                                                />
-                                            </div>
+                            <div className="relative group">
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000"></div>
+                                <div className="relative p-6 rounded-2xl bg-[#0a0e1a]/80 backdrop-blur-xl border border-white/10">
+                                    <h3 className="font-outfit text-xl font-bold mb-6 flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-emerald-500/20">
+                                            <BarChart3 className="text-emerald-400 w-5 h-5" />
                                         </div>
-                                    ))}
+                                        Carga Legislativa
+                                    </h3>
+                                    <div className="space-y-6">
+                                        {stats.camaraStats.map((stat: any) => (
+                                            <div key={stat.camara} className="space-y-3">
+                                                <div className="flex justify-between text-sm font-medium">
+                                                    <span className="text-slate-300 capitalize">{stat.camara === 'camara' ? 'Cámara Diputados' : 'Senado'}</span>
+                                                    <span className="text-slate-100">{stat.proyectos} proyectos</span>
+                                                </div>
+                                                <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                    <motion.div
+                                                        className={`h-full ${stat.camara === 'camara' ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-rose-500 to-orange-400 shadow-[0_0_10px_rgba(244,63,94,0.5)]'}`}
+                                                        initial={{ width: 0 }}
+                                                        whileInView={{ width: `${(stat.proyectos / stats.totalProyectos) * 100}%` }}
+                                                        transition={{ duration: 1.5, ease: "circOut" }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </MotionCard>
+                            </div>
 
                             {/* Official Sources */}
-                            <div className="p-6 rounded-xl bg-gradient-to-b from-white/5 to-transparent border border-white/5">
-                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Fuentes Verificadas</h4>
-                                <div className="space-y-3">
+                            <div className="p-6 rounded-2xl bg-gradient-to-b from-white/5 to-transparent border border-white/10 backdrop-blur-md">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Fuentes Verificadas</h4>
+                                <div className="space-y-2">
                                     <SourceLink label="Cámara de Diputados" url="https://opendata.camara.cl/" />
                                     <SourceLink label="Senado de la República" url="https://tramitacion.senado.cl/" />
                                     <SourceLink label="Biblioteca del Congreso" url="https://www.bcn.cl/" />

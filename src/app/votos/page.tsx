@@ -23,7 +23,7 @@ export default function VotosPage() {
 
                 const res = await fetch(url)
                 const data = await res.json()
-                setVotes(data)
+                setVotes(Array.isArray(data) ? data : (data.votes || []))
             } catch (err) {
                 console.error('Error fetching votes:', err)
             } finally {
@@ -34,10 +34,10 @@ export default function VotosPage() {
         fetchVotes()
     }, [camaraFilter, resultFilter])
 
-    const filteredVotes = votes.filter(v =>
-        v.materia.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.bill?.boletin.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredVotes = votes?.filter(v =>
+        (v.materia?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (v.bill?.boletin?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+    ) || []
 
     return (
         <div className="min-h-screen bg-[#030712] p-6 md:p-10">
@@ -124,7 +124,16 @@ export default function VotosPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredVotes.map((vote) => (
-                            <VoteCard key={vote.id} vote={vote} />
+                            <VoteCard key={vote.id} vote={{
+                                ...vote,
+                                description: vote.materia,
+                                vote_date: vote.fecha,
+                                result: vote.resultado,
+                                yes_count: vote.a_favor,
+                                no_count: vote.contra,
+                                abstention_count: vote.abstenciones,
+                                absent_count: vote.ausentes
+                            }} />
                         ))}
                     </div>
                 )}

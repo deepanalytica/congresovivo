@@ -1,9 +1,10 @@
-import soap from 'soap';
+import { DOMParser } from 'xmldom';
 
-const CAMARA_WSDL_URL = 'https://opendata.camara.cl/wscamaradiputados.asmx?WSDL';
+const CAMARA_BASE_URL = 'https://opendata.camara.cl';
 
 /**
  * OpenData API Client for Committees (Comisiones)
+ * Uses native fetch + xmldom to avoid 'soap' package issues
  */
 
 export interface Comision {
@@ -28,16 +29,48 @@ export interface SesionComision {
 }
 
 /**
+ * Execute SOAP request to Cámara OpenData
+ */
+async function executeCamaraSoap(action: string, body: string): Promise<Document> {
+    const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    ${body}
+  </soap:Body>
+</soap:Envelope>`;
+
+    const response = await fetch(`${CAMARA_BASE_URL}/wscamaradiputados.asmx`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': `http://tempuri.org/${action}`,
+        },
+        body: soapEnvelope,
+    });
+
+    if (!response.ok) {
+        throw new Error(`SOAP error! status: ${response.status}`);
+    }
+
+    const xmlText = await response.text();
+    const parser = new DOMParser();
+    return parser.parseFromString(xmlText, 'text/xml');
+}
+
+/**
  * Get all active committees
  */
 export async function retornarComisionesVigentes(): Promise<Comision[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarComisionesVigentesAsync({});
+        const doc = await executeCamaraSoap('retornarComisionesVigentes', `
+            <retornarComisionesVigentes xmlns="http://tempuri.org/" />
+        `);
 
-        const comisionesXML = result.retornarComisionesVigentesResult;
-        const comisiones = parseComisionesXML(comisionesXML);
-        return comisiones;
+        const resultNode = doc.getElementsByTagName('retornarComisionesVigentesResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseComisionesXML(xmlContent);
     } catch (error) {
         console.error('Error fetching comisiones vigentes:', error);
         throw error;
@@ -49,11 +82,15 @@ export async function retornarComisionesVigentes(): Promise<Comision[]> {
  */
 export async function retornarComision(comisionId: string): Promise<Comision | null> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarComisionAsync({ prmComisionId: comisionId });
+        const doc = await executeCamaraSoap('retornarComision', `
+            <retornarComision xmlns="http://tempuri.org/">
+                <prmComisionId>${comisionId}</prmComisionId>
+            </retornarComision>
+        `);
 
-        const comisionXML = result.retornarComisionResult;
-        const comisiones = parseComisionesXML(comisionXML);
+        const resultNode = doc.getElementsByTagName('retornarComisionResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        const comisiones = parseComisionesXML(xmlContent);
         return comisiones[0] || null;
     } catch (error) {
         console.error('Error fetching comision:', error);
@@ -69,15 +106,16 @@ export async function retornarSesionesXComisionYAnno(
     year: number
 ): Promise<SesionComision[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarSesionesXComisionYAnnoAsync({
-            prmComisionId: comisionId,
-            prmAnno: year
-        });
+        const doc = await executeCamaraSoap('retornarSesionesXComisionYAnno', `
+            <retornarSesionesXComisionYAnno xmlns="http://tempuri.org/">
+                <prmComisionId>${comisionId}</prmComisionId>
+                <prmAnno>${year}</prmAnno>
+            </retornarSesionesXComisionYAnno>
+        `);
 
-        const sesionesXML = result.retornarSesionesXComisionYAnnoResult;
-        const sesiones = parseSesionesXML(sesionesXML, comisionId);
-        return sesiones;
+        const resultNode = doc.getElementsByTagName('retornarSesionesXComisionYAnnoResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseSesionesXML(xmlContent, comisionId);
     } catch (error) {
         console.error('Error fetching sesiones:', error);
         throw error;
@@ -89,12 +127,15 @@ export async function retornarSesionesXComisionYAnno(
  */
 export async function retornarComisionesXPeriodo(periodoId: string): Promise<Comision[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarComisionesXPeriodoAsync({ prmPeriodoId: periodoId });
+        const doc = await executeCamaraSoap('retornarComisionesXPeriodo', `
+            <retornarComisionesXPeriodo xmlns="http://tempuri.org/">
+                <prmPeriodoId>${periodoId}</prmPeriodoId>
+            </retornarComisionesXPeriodo>
+        `);
 
-        const comisionesXML = result.retornarComisionesXPeriodoResult;
-        const comisiones = parseComisionesXML(comisionesXML);
-        return comisiones;
+        const resultNode = doc.getElementsByTagName('retornarComisionesXPeriodoResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseComisionesXML(xmlContent);
     } catch (error) {
         console.error('Error fetching comisiones por periodo:', error);
         throw error;
@@ -107,7 +148,7 @@ export async function retornarComisionesXPeriodo(periodoId: string): Promise<Com
 
 function parseComisionesXML(xml: string): Comision[] {
     const comisiones: Comision[] = [];
-    const matches = xml.matchAll(/<Comision>(.*?)<\/Comision>/gs);
+    const matches = xml.matchAll(/<Comision>([\s\S]*?)<\/Comision>/g);
 
     for (const match of matches) {
         const comisionXML = match[1];
@@ -135,7 +176,7 @@ function parseComisionesXML(xml: string): Comision[] {
 
 function parseSesionesXML(xml: string, comisionId: string): SesionComision[] {
     const sesiones: SesionComision[] = [];
-    const matches = xml.matchAll(/<Sesion>(.*?)<\/Sesion>/gs);
+    const matches = xml.matchAll(/<Sesion>([\s\S]*?)<\/Sesion>/g);
 
     for (const match of matches) {
         const sesionXML = match[1];
@@ -163,7 +204,7 @@ function parseSesionesXML(xml: string, comisionId: string): SesionComision[] {
 }
 
 function extractXMLValue(xml: string, tag: string): string {
-    const regex = new RegExp(`<${tag}>(.*?)<\/${tag}>`, 's');
+    const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
     const match = xml.match(regex);
     return match ? match[1].trim() : '';
 }

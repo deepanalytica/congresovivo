@@ -42,7 +42,7 @@ export default function ComisionesPage() {
     }, [camaraFilter, tipoFilter])
 
     const filteredCommittees = (Array.isArray(committees) ? committees : []).filter(c =>
-        c.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.nombre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.nombre_corto?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
@@ -131,7 +131,15 @@ export default function ComisionesPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredCommittees.map((committee) => (
-                            <CommitteeCard key={committee.id} committee={committee} />
+                            <CommitteeCard key={committee.id} committee={{
+                                ...committee,
+                                name: committee.nombre,
+                                shortName: committee.nombre_corto,
+                                type: committee.tipo,
+                                chamber: committee.camara,
+                                email: committee.correo,
+                                phone: committee.telefono
+                            }} />
                         ))}
                     </div>
                 )}

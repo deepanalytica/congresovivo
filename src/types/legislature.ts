@@ -18,6 +18,7 @@ export type LegislativeStage =
     | 'tribunal_constitucional'
     | 'aprobado'
     | 'promulgado'
+    | 'publicado'
     | 'rechazado'
     | 'archivado'
 

@@ -31,8 +31,7 @@ export async function GET(request: NextRequest) {
                         nombre_completo,
                         partido,
                         camara,
-                        region,
-                        ideologia
+                        region
                     )
                 )
             `;

@@ -1,12 +1,14 @@
-import soap from 'soap';
+import { DOMParser } from 'xmldom';
 
-const CAMARA_WSDL_URL = 'https://opendata.camara.cl/wscamaradiputados.asmx?WSDL';
+const CAMARA_BASE_URL = 'https://opendata.camara.cl';
 
 /**
  * OpenData API Client for Bills (Proyectos de Ley)
+ * Uses native fetch + xmldom to avoid 'soap' package issues
  */
 
 export interface ProyectoLey {
+    id: string;
     boletin: string;
     titulo: string;
     resumen?: string;
@@ -21,6 +23,7 @@ export interface ProyectoLey {
     numeroLey?: string;
     urgencia?: string;
     materias?: string[];
+    autores?: AutorProyecto[];
 }
 
 export interface AutorProyecto {
@@ -37,15 +40,52 @@ export interface TramitacionEvento {
 }
 
 /**
+ * Execute SOAP request to Cámara OpenData
+ */
+async function executeCamaraSoap(action: string, body: string): Promise<Document> {
+    const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    ${body}
+  </soap:Body>
+</soap:Envelope>`;
+
+    const response = await fetch(`${CAMARA_BASE_URL}/WSLegislativo.asmx`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': `http://tempuri.org/${action}`,
+        },
+        body: soapEnvelope,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ SOAP Error (${action}): status ${response.status}`, errorText);
+        throw new Error(`SOAP error! status: ${response.status}`);
+    }
+
+    const xmlText = await response.text();
+    const parser = new DOMParser();
+    return parser.parseFromString(xmlText, 'text/xml');
+}
+
+/**
  * Get bill by bulletin number
  */
 export async function retornarProyectoLey(boletin: string): Promise<ProyectoLey | null> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarProyectoLeyAsync({ prmBoletin: boletin });
+        const doc = await executeCamaraSoap('retornarProyectoLey', `
+            <retornarProyectoLey xmlns="http://tempuri.org/">
+                <prmBoletin>${boletin}</prmBoletin>
+            </retornarProyectoLey>
+        `);
 
-        const proyectoXML = result.retornarProyectoLeyResult;
-        const proyectos = parseProyectosXML(proyectoXML);
+        const resultNode = doc.getElementsByTagName('retornarProyectoLeyResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        const proyectos = parseProyectosXML(xmlContent);
         return proyectos[0] || null;
     } catch (error) {
         console.error('Error fetching proyecto:', error);
@@ -53,16 +93,111 @@ export async function retornarProyectoLey(boletin: string): Promise<ProyectoLey 
     }
 }
 
+
+const SENADO_BASE_URL = 'https://tramitacion.senado.cl/wspublico';
+
+/**
+ * Get bill by bulletin number from Senate API (Fallback)
+ */
+export async function retornarProyectoLeySenate(boletin: string): Promise<ProyectoLey | null> {
+    try {
+        // Clean bulletin (remove check digit if present)
+        const cleanBol = boletin.split('-')[0];
+        const url = `${SENADO_BASE_URL}/tramitacion.php?boletin=${cleanBol}`;
+
+        const response = await fetch(url);
+        if (!response.ok) return null;
+
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, 'text/xml');
+
+        const proyectoNode = doc.getElementsByTagName('proyecto')[0];
+        if (!proyectoNode) return null;
+
+        const getTag = (parent: Element, tag: string) => {
+            const elements = parent.getElementsByTagName(tag);
+            return elements.length > 0 ? elements[0].textContent || '' : '';
+        };
+
+        const descripcion = proyectoNode.getElementsByTagName('descripcion')[0];
+        if (!descripcion) return null;
+
+        const rawDate = getTag(descripcion, 'fecha_ingreso');
+
+        // Parse authors
+        const autores: AutorProyecto[] = [];
+        const autoresNode = proyectoNode.getElementsByTagName('autores')[0];
+        if (autoresNode) {
+            const autorElements = autoresNode.getElementsByTagName('autor');
+            Array.from(autorElements).forEach(el => {
+                const nombre = (getTag(el, 'NOMBRE') + ' ' + getTag(el, 'APELLIDO')).trim();
+                // If explicit tags parse failed, try generic text
+                const finalName = nombre.length > 1 ? nombre : (el.textContent || '').trim();
+                if (finalName) {
+                    autores.push({ id: '', nombre: finalName });
+                }
+            });
+            // Try explicit 'parlamentario' tag if 'autor' element list was empty or parsed no names
+            if (autores.length === 0) {
+                const parlElements = autoresNode.getElementsByTagName('parlamentario');
+                Array.from(parlElements).forEach(el => {
+                    const nombre = (getTag(el, 'NOMBRE') + ' ' + getTag(el, 'APELLIDO')).trim();
+                    const finalName = nombre.length > 1 ? nombre : (el.textContent || '').trim();
+                    if (finalName) {
+                        autores.push({ id: '', nombre: finalName });
+                    }
+                });
+            }
+        }
+
+        // Map Senate XML to internal format
+        const proyecto: ProyectoLey = {
+            id: cleanBol, // Senate uses bulletin as ID
+            boletin: getTag(descripcion, 'boletin'),
+            titulo: getTag(descripcion, 'titulo'),
+            fechaIngreso: formatSenateDate(rawDate),
+            tipo: getTag(descripcion, 'tipo_iniciativa'), // Senate naming
+            camaraOrigen: getTag(descripcion, 'camara_origen'),
+            tipoIniciativa: getTag(descripcion, 'tipo_iniciativa'),
+            estado: getTag(descripcion, 'estado'),
+            etapa: getTag(descripcion, 'etapa'),
+            urgencia: getTag(descripcion, 'urgencia_actual'),
+            subEtapa: getTag(descripcion, 'subetapa'),
+            autores: autores
+        };
+
+        return proyecto;
+    } catch (error) {
+        console.error('Error fetching senate proyecto:', error);
+        return null;
+    }
+}
+
+function formatSenateDate(dateStr: string): string {
+    // dd/mm/yyyy -> yyyy-mm-dd (ISO)
+    if (!dateStr) return new Date().toISOString();
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`;
+    }
+    return new Date().toISOString();
+}
+
 /**
  * Get all bills from a specific year
  */
 export async function retornarProyectosLeyXAnno(year: number): Promise<ProyectoLey[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarProyectosLeyXAnnoAsync({ prmAnno: year });
+        const doc = await executeCamaraSoap('retornarProyectosLeyXAnno', `
+            <retornarProyectosLeyXAnno xmlns="http://tempuri.org/">
+                <prmAnno>${year}</prmAnno>
+            </retornarProyectosLeyXAnno>
+        `);
 
-        const proyectosXML = result.retornarProyectosLeyXAnnoResult;
-        return parseProyectosXML(proyectosXML);
+        const resultNode = doc.getElementsByTagName('retornarProyectosLeyXAnnoResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseProyectosXML(xmlContent);
     } catch (error) {
         console.error('Error fetching proyectos by year:', error);
         throw error;
@@ -74,11 +209,15 @@ export async function retornarProyectosLeyXAnno(year: number): Promise<ProyectoL
  */
 export async function retornarAutoresProyecto(boletin: string): Promise<AutorProyecto[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarAutoresProyectoAsync({ prmBoletin: boletin });
+        const doc = await executeCamaraSoap('retornarAutoresProyecto', `
+            <retornarAutoresProyecto xmlns="http://tempuri.org/">
+                <prmBoletin>${boletin}</prmBoletin>
+            </retornarAutoresProyecto>
+        `);
 
-        const autoresXML = result.retornarAutoresProyectoResult;
-        return parseAutoresXML(autoresXML);
+        const resultNode = doc.getElementsByTagName('retornarAutoresProyectoResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseAutoresXML(xmlContent);
     } catch (error) {
         console.error('Error fetching autores:', error);
         return [];
@@ -90,11 +229,15 @@ export async function retornarAutoresProyecto(boletin: string): Promise<AutorPro
  */
 export async function retornarTramitacionProyecto(boletin: string): Promise<TramitacionEvento[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarTramitacionProyectoAsync({ prmBoletin: boletin });
+        const doc = await executeCamaraSoap('retornarTramitacionProyecto', `
+            <retornarTramitacionProyecto xmlns="http://tempuri.org/">
+                <prmBoletin>${boletin}</prmBoletin>
+            </retornarTramitacionProyecto>
+        `);
 
-        const tramitacionXML = result.retornarTramitacionProyectoResult;
-        return parseTramitacionXML(tramitacionXML);
+        const resultNode = doc.getElementsByTagName('retornarTramitacionProyectoResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseTramitacionXML(xmlContent);
     } catch (error) {
         console.error('Error fetching tramitacion:', error);
         return [];
@@ -106,11 +249,13 @@ export async function retornarTramitacionProyecto(boletin: string): Promise<Tram
  */
 export async function retornarMaterias(): Promise<{ codigo: string; nombre: string }[]> {
     try {
-        const client = await soap.createClientAsync(CAMARA_WSDL_URL);
-        const [result] = await client.retornarMateriasAsync({});
+        const doc = await executeCamaraSoap('retornarMaterias', `
+            <retornarMaterias xmlns="http://tempuri.org/" />
+        `);
 
-        const materiasXML = result.retornarMateriasResult;
-        return parseMateriasXML(materiasXML);
+        const resultNode = doc.getElementsByTagName('retornarMateriasResult')[0];
+        const xmlContent = resultNode?.textContent || '';
+        return parseMateriasXML(xmlContent);
     } catch (error) {
         console.error('Error fetching materias:', error);
         return [];
@@ -123,12 +268,13 @@ export async function retornarMaterias(): Promise<{ codigo: string; nombre: stri
 
 function parseProyectosXML(xml: string): ProyectoLey[] {
     const proyectos: ProyectoLey[] = [];
-    const matches = xml.matchAll(/<Proyecto>(.*?)<\/Proyecto>/gs);
+    const matches = xml.matchAll(/<Proyecto>([\s\S]*?)<\/Proyecto>/g);
 
     for (const match of matches) {
         const proyectoXML = match[1];
 
         proyectos.push({
+            id: extractXMLValue(proyectoXML, 'Id'),
             boletin: extractXMLValue(proyectoXML, 'Boletin'),
             titulo: extractXMLValue(proyectoXML, 'Titulo'),
             resumen: extractXMLValue(proyectoXML, 'Resumen'),
@@ -150,7 +296,7 @@ function parseProyectosXML(xml: string): ProyectoLey[] {
 
 function parseAutoresXML(xml: string): AutorProyecto[] {
     const autores: AutorProyecto[] = [];
-    const matches = xml.matchAll(/<Autor>(.*?)<\/Autor>/gs);
+    const matches = xml.matchAll(/<Autor>([\s\S]*?)<\/Autor>/g);
 
     for (const match of matches) {
         const autorXML = match[1];
@@ -166,7 +312,7 @@ function parseAutoresXML(xml: string): AutorProyecto[] {
 
 function parseTramitacionXML(xml: string): TramitacionEvento[] {
     const eventos: TramitacionEvento[] = [];
-    const matches = xml.matchAll(/<Tramite>(.*?)<\/Tramite>/gs);
+    const matches = xml.matchAll(/<Tramite>([\s\S]*?)<\/Tramite>/g);
 
     for (const match of matches) {
         const tramiteXML = match[1];
@@ -183,7 +329,7 @@ function parseTramitacionXML(xml: string): TramitacionEvento[] {
 
 function parseMateriasXML(xml: string): { codigo: string; nombre: string }[] {
     const materias: { codigo: string; nombre: string }[] = [];
-    const matches = xml.matchAll(/<Materia>(.*?)<\/Materia>/gs);
+    const matches = xml.matchAll(/<Materia>([\s\S]*?)<\/Materia>/g);
 
     for (const match of matches) {
         const materiaXML = match[1];
@@ -197,7 +343,7 @@ function parseMateriasXML(xml: string): { codigo: string; nombre: string }[] {
 }
 
 function extractXMLValue(xml: string, tag: string): string {
-    const regex = new RegExp(`<${tag}>(.*?)<\/${tag}>`, 's');
+    const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
     const match = xml.match(regex);
     return match ? match[1].trim() : '';
 }

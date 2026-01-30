@@ -1,13 +1,23 @@
 "use client"
 
-import './../globals.css'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ParliamentarianCard } from '@/components/legislature/ParliamentarianCard'
 import { Users, Filter, Search, ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+
+interface Parliamentarian {
+    id: string;
+    nombre_completo: string;
+    partido: string;
+    camara: string;
+    region: string;
+    ideologia: string;
+}
 
 export default function ParlamentariosPage() {
-    const [parlamentarios, setParlamentarios] = useState<any[]>([])
+    const [parlamentarios, setParlamentarios] = useState<Parliamentarian[]>([])
     const [loading, setLoading] = useState(true)
     const [camaraFilter, setCamaraFilter] = useState('all')
     const [ideologyFilter, setIdeologyFilter] = useState('all')
@@ -29,7 +39,7 @@ export default function ParlamentariosPage() {
         fetchParls()
     }, [])
 
-    const filteredParls = parlamentarios.filter(p => {
+    const filteredParls = parlamentarios.filter((p: Parliamentarian) => {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
             p.nombre_completo.toLowerCase().includes(query) ||
@@ -38,7 +48,6 @@ export default function ParlamentariosPage() {
 
         const matchesCamara = camaraFilter === 'all' || p.camara === camaraFilter;
 
-        // Match ideology if needed, currently data might be mixed case or null
         const matchesIdeology = ideologyFilter === 'all' ||
             (p.ideologia && p.ideologia.toLowerCase() === ideologyFilter.toLowerCase());
 
@@ -46,62 +55,72 @@ export default function ParlamentariosPage() {
     })
 
     return (
-        <div className="min-h-screen bg-[#030712] p-6 md:p-10">
-            <div className="max-w-7xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <Link href="/" className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-                            <ArrowLeft className="text-slate-400" />
-                        </Link>
-                        <div>
-                            <h1 className="font-outfit text-4xl font-bold text-white flex items-center gap-3">
-                                <Users className="text-cyan-400" />
-                                Parlamentarios
+        <div className="min-h-screen bg-[#030712] relative overflow-hidden">
+            {/* Background Decorations */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] -z-10 animate-pulse"></div>
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] -z-10"></div>
+
+            <main className="p-6 md:p-12 lg:px-20 pt-10">
+                <div className="max-w-7xl mx-auto space-y-12">
+                    {/* Header Section */}
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                <Link href="/">
+                                    <Button variant="outline" size="icon" className="rounded-xl">
+                                        <ArrowLeft className="w-5 h-5" />
+                                    </Button>
+                                </Link>
+                                <div className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold uppercase tracking-widest">
+                                    Poder Legislativo
+                                </div>
+                            </div>
+                            <h1 className="font-outfit text-5xl md:text-6xl font-bold text-white tracking-tight">
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Nuestro</span> Congreso
                             </h1>
-                            <p className="text-slate-400 mt-2">Senadores y Diputados en ejercicio</p>
+                            <p className="text-slate-400 text-lg max-w-2xl">
+                                Conoce a los representantes que legislan por Chile. Filtra por cámara, partido o ideología política.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl text-center min-w-[140px]">
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Total</p>
+                                <p className="text-3xl font-bold text-white font-outfit">{filteredParls.length}</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Total Activos</p>
-                        <p className="text-xl font-bold text-white font-outfit">{filteredParls.length}</p>
-                    </div>
-                </div>
+                    {/* Advanced Controls */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
+                        <div className="lg:col-span-2 relative group">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-500"></div>
+                            <div className="relative flex items-center bg-[#0a0e1a]/80 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-3">
+                                <Search className="w-5 h-5 text-slate-500 mr-3" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por nombre, partido o región..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-slate-200 w-full placeholder:text-slate-600 focus:ring-0"
+                                />
+                            </div>
+                        </div>
 
-                {/* Filters */}
-                <div className="flex flex-col md:flex-row gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nombre, partido o región..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
-                        />
-                    </div>
-
-                    <div className="flex gap-4">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
-                            <Filter className="w-4 h-4 text-slate-500" />
+                        <div className="flex gap-4">
                             <select
                                 value={camaraFilter}
                                 onChange={(e) => setCamaraFilter(e.target.value)}
-                                className="bg-transparent text-sm text-slate-300 focus:outline-none cursor-pointer"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-300 focus:bg-white/10 focus:border-cyan-500/50 outline-none transition-all cursor-pointer appearance-none"
                             >
                                 <option value="all">Todas las Cámaras</option>
                                 <option value="senado">Senado</option>
                                 <option value="camara">Diputados</option>
                             </select>
-                        </div>
-
-                        <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
-                            <Filter className="w-4 h-4 text-slate-500" />
                             <select
                                 value={ideologyFilter}
                                 onChange={(e) => setIdeologyFilter(e.target.value)}
-                                className="bg-transparent text-sm text-slate-300 focus:outline-none cursor-pointer"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-300 focus:bg-white/10 focus:border-cyan-500/50 outline-none transition-all cursor-pointer appearance-none"
                             >
                                 <option value="all">Todas las Ideologías</option>
                                 <option value="izquierda">Izquierda</option>
@@ -113,31 +132,52 @@ export default function ParlamentariosPage() {
                             </select>
                         </div>
                     </div>
+
+                    {/* Results Grid */}
+                    <AnimatePresence mode="popLayout">
+                        {loading ? (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                            >
+                                {[...Array(8)].map((_, i) => (
+                                    <div key={i} className="h-72 bg-white/5 rounded-2xl border border-white/10 animate-pulse delay-[i*100ms]" />
+                                ))}
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                layout
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                            >
+                                {filteredParls.map((parl) => (
+                                    <ParliamentarianCard key={parl.id} parliamentarian={parl} />
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {!loading && filteredParls.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="py-32 text-center space-y-6"
+                        >
+                            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
+                                <Users className="w-10 h-10 text-slate-700" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-bold text-slate-400 font-outfit">Sin resultados</h3>
+                                <p className="text-slate-600">No encontramos parlamentarios que coincidan con tu búsqueda.</p>
+                            </div>
+                            <Button variant="outline" onClick={() => { setSearchQuery(''); setCamaraFilter('all'); setIdeologyFilter('all'); }}>
+                                Limpiar Filtros
+                            </Button>
+                        </motion.div>
+                    )}
                 </div>
-
-                {/* Grid */}
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                            <div key={i} className="h-48 bg-white/5 rounded-2xl border border-white/10" />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredParls.map((parl) => (
-                            <ParliamentarianCard key={parl.id} parliamentarian={parl} />
-                        ))}
-                    </div>
-                )}
-
-                {!loading && filteredParls.length === 0 && (
-                    <div className="py-20 text-center">
-                        <Users className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-slate-400">No se encontraron parlamentarios</h3>
-                        <p className="text-slate-600 mt-2">Intenta cambiar los filtros de búsqueda</p>
-                    </div>
-                )}
-            </div>
+            </main>
         </div>
     )
 }

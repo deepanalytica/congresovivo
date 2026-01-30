@@ -1,107 +1,139 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { retornarVotacionesXAnno, retornarVotacionDetalle } from '@/lib/api/opendata';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes for heavy roll-call processing
 
 /**
- * Sync endpoint for voting data
- * Generates realistic voting records for existing bills
+ * Real Sync endpoint for legislative votes and roll-call records
  * POST /api/sync/votes
  */
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
     try {
-        console.log('🗳️ Starting voting data sync...');
+        const body = await request.json().catch(() => ({}));
+        const { year, limit = 20 } = body;
+        const currentYear = year || new Date().getFullYear();
 
-        // 1. Fetch all bills to link votes
-        const { data: bills, error: billsError } = await supabase
-            .from('bills')
-            .select('id, boletin, titulo, estado, camara_origen');
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-        if (billsError) throw billsError;
-        if (!bills || bills.length === 0) {
-            return NextResponse.json({ message: 'No bills found to attach votes to.' });
-        }
+        console.log(`🔄 Syncing REAL votes for year ${currentYear}...`);
 
-        console.log(`Processing ${bills.length} bills...`);
+        // 1. Fetch all parliamentarians for mapping (external_id -> UUID)
+        const { data: parls } = await supabase
+            .from('parliamentarians')
+            .select('id, external_id');
 
-        const results = {
-            success: 0,
-            failed: 0,
-            errors: [] as string[]
-        };
+        const parlMap = new Map();
+        parls?.forEach(p => parlMap.set(p.external_id, p.id));
 
-        for (const bill of bills) {
+        // 2. Fetch votes from OpenData API
+        const votaciones = await retornarVotacionesXAnno(currentYear);
+        console.log(`📥 Found ${votaciones.length} votes in OpenData`);
+
+        // Process a subset to avoid timeouts (roll-calls require 1 API call per vote)
+        const votesToProcess = votaciones.slice(0, limit);
+        let votesSynced = 0;
+        let recordsSynced = 0;
+        const errors: string[] = [];
+
+        for (const vot of votesToProcess) {
             try {
-                // Determine voting outcome based on bill status
-                const isApproved = ['aprobado', 'promulgado'].includes(bill.estado);
-                const isRejected = bill.estado === 'rechazado';
-
-                // Randomize vote counts
-                // Senate has 50 members, Chamber has 155
-                const totalMembers = bill.camara_origen === 'senado' ? 50 : 155;
-                let aFavor, contra, abstenciones, ausentes;
-
-                if (isApproved) {
-                    aFavor = Math.floor(totalMembers * (0.6 + Math.random() * 0.35)); // 60-95%
-                    contra = Math.floor(Math.random() * (totalMembers - aFavor) * 0.5);
-                } else if (isRejected) {
-                    contra = Math.floor(totalMembers * (0.5 + Math.random() * 0.4)); // 50-90%
-                    aFavor = Math.floor(Math.random() * (totalMembers - contra) * 0.6);
-                } else {
-                    // In progress: could have had a close vote or no vote yet
-                    // Let's assume some vote happened for most bills
-                    aFavor = Math.floor(totalMembers * (0.4 + Math.random() * 0.4));
-                    contra = Math.floor(Math.random() * (totalMembers - aFavor));
+                // Find bill_id if bulletin exists in our database
+                let bill_id = null;
+                if (vot.boletin) {
+                    const { data: bill } = await supabase
+                        .from('bills')
+                        .select('id')
+                        .eq('bulletin_number', vot.boletin)
+                        .maybeSingle();
+                    bill_id = bill?.id;
                 }
 
-                abstenciones = Math.floor(Math.random() * (totalMembers - aFavor - contra) * 0.3);
-                ausentes = totalMembers - aFavor - contra - abstenciones;
+                // Upsert vote into legislative_votes
+                const { data: voteEntry, error: voteError } = await supabase
+                    .from('legislative_votes')
+                    .upsert({
+                        external_id: vot.id,
+                        bill_id: bill_id,
+                        vote_date: vot.fecha,
+                        description: vot.descripcion,
+                        result: vot.resultado.toLowerCase().includes('aprob') ? 'aprobado' :
+                            vot.resultado.toLowerCase().includes('rechaz') ? 'rechazado' : 'otros',
+                        quorum_type: vot.quorum,
+                        vote_type: vot.tipo,
+                        yes_count: vot.afirmativos,
+                        no_count: vot.negativos,
+                        abstention_count: vot.abstenciones,
+                        absent_count: vot.dispensados,
+                        paired_count: vot.pareos,
+                        vote_context: 'sala'
+                    }, { onConflict: 'external_id' })
+                    .select()
+                    .single();
 
-                const voteData = {
-                    external_id: `VOTE-${bill.boletin}`,
-                    bill_id: bill.id,
-                    boletin: bill.boletin,
-                    fecha: new Date(Date.now() - Math.random() * 1000 * 60 * 60 * 24 * 30 * 6).toISOString().split('T')[0], // Last 6 months
-                    camara: bill.camara_origen,
-                    sesion: `Sesión ${Math.floor(Math.random() * 100) + 1}`,
-                    tipo: 'sala',
-                    materia: `Votación general del proyecto: ${bill.titulo}`,
-                    resultado: isApproved ? 'aprobado' : (isRejected ? 'rechazado' : (aFavor > contra ? 'aprobado' : 'rechazado')),
-                    quorum: 'Mayoría simple',
-                    a_favor: aFavor,
-                    contra: contra,
-                    abstenciones: abstenciones,
-                    ausentes: ausentes,
-                    pareos: 0
-                };
+                if (voteError) throw voteError;
+                votesSynced++;
 
-                const { error: voteError } = await supabase
-                    .from('votes')
-                    .upsert(voteData, { onConflict: 'external_id' });
+                // 3. Fetch Roll Call Detail (Nominal Vote)
+                // This is the heavy part: call API for each vote's details
+                const detalles = await retornarVotacionDetalle(vot.id);
+                if (detalles.length > 0) {
+                    const records = detalles.map(det => {
+                        // Map DIP-ID to UUID
+                        const extId = `DIP-${det.parlamentarioId}`;
+                        const parlId = parlMap.get(extId);
 
-                if (voteError) {
-                    results.failed++;
-                    results.errors.push(`${bill.boletin}: ${voteError.message}`);
-                } else {
-                    results.success++;
+                        if (!parlId) return null;
+
+                        // Normalize Choice
+                        let option = 'ausente';
+                        const opt = det.opcion.toLowerCase();
+                        if (opt.includes('afirmativo') || opt === 'si') option = 'si';
+                        else if (opt.includes('negativo') || opt === 'no') option = 'no';
+                        else if (opt.includes('abstencion')) option = 'abstencion';
+                        else if (opt.includes('pareo')) option = 'pareo';
+
+                        return {
+                            vote_id: voteEntry.id,
+                            parliamentarian_id: parlId,
+                            vote_option: option
+                        };
+                    }).filter(r => r !== null);
+
+                    if (records.length > 0) {
+                        const { error: recError } = await supabase
+                            .from('legislative_vote_records')
+                            .upsert(records, { onConflict: 'vote_id, parliamentarian_id' });
+
+                        if (recError) {
+                            console.error(`Error saving records for vote ${vot.id}:`, recError);
+                        } else {
+                            recordsSynced += records.length;
+                        }
+                    }
                 }
-
             } catch (err: any) {
-                results.failed++;
-                results.errors.push(`${bill.boletin}: ${err.message}`);
+                console.error(`❌ Error syncing vote ${vot.id}:`, err);
+                errors.push(`${vot.id}: ${err.message}`);
             }
         }
 
         return NextResponse.json({
             success: true,
             summary: {
-                total_processed: bills.length,
-                synced_successfully: results.success,
-                failed: results.failed
+                votes_synced: votesSynced,
+                records_synced: recordsSynced,
+                total_in_opendata: votaciones.length,
+                processed_limit: limit
             },
-            errors: results.errors.slice(0, 5) // Show first 5 errors
+            errors: errors.slice(0, 10)
         });
 
     } catch (error: any) {
-        console.error('❌ Vote sync error:', error);
+        console.error('❌ Vote Sync Critical Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

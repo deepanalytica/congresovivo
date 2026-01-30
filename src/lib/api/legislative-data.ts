@@ -25,17 +25,25 @@ export async function fetchStats() {
             supabase.from('parliamentarians').select('*', { count: 'exact', head: true }).eq('camara', 'camara')
         ]);
 
-        // Get bills by status and chamber
-        const { data: bills } = await supabase
+        // Get bills stats from the new table
+        const { data: bills, error: billsError } = await supabase
             .from('bills')
             .select('estado, camara_origen');
 
+        if (billsError) {
+            console.error('Error fetching bills for stats:', billsError);
+        }
+
         const proyectosEnTramite = bills?.filter(b =>
-            ['ingreso', 'comision', 'segundo_tramite', 'comision_mixta'].includes(b.estado)
+            ['en_tramite', 'primer_tramite', 'segundo_tramite', 'tercer_tramite'].includes(b.estado || '')
         ).length || 0;
 
         const proyectosAprobados = bills?.filter(b =>
-            ['aprobado', 'promulgado'].includes(b.estado)
+            ['aprobado', 'promulgado'].includes(b.estado || '')
+        ).length || 0;
+
+        const proyectosRechazados = bills?.filter(b =>
+            ['rechazado', 'archivado'].includes(b.estado || '')
         ).length || 0;
 
         // Calculate chamber stats
@@ -48,9 +56,10 @@ export async function fetchStats() {
             proyectosActivos: proyectosEnTramite,
             proyectosEnTramite,
             proyectosAprobados,
+            proyectosRechazados,
             senadores: senadoresCount || 0,
             diputados: diputadosCount || 0,
-            comisionesActivas: 38, // Static for now
+            comisionesActivas: 38,
             camaraStats: [
                 { camara: 'camara', proyectos: camaraProjects },
                 { camara: 'senado', proyectos: senadoProjects }
@@ -58,13 +67,13 @@ export async function fetchStats() {
         };
     } catch (error) {
         console.error('Error fetching stats:', error);
-        // Return zeros if error
         return {
             totalParlamentarios: 0,
             totalProyectos: 0,
             proyectosActivos: 0,
             proyectosEnTramite: 0,
             proyectosAprobados: 0,
+            proyectosRechazados: 0,
             senadores: 0,
             diputados: 0,
             comisionesActivas: 38,
@@ -83,8 +92,13 @@ export async function fetchBills() {
     try {
         const { data: bills, error } = await supabase
             .from('bills')
-            .select('*')
-            .order('fecha_ultima_modificacion', { ascending: false })
+            .select(`
+                *,
+                bill_authors (
+                    parliamentarian_id
+                )
+            `)
+            .order('entry_date', { ascending: false })
             .limit(50);
 
         if (error) {
@@ -92,19 +106,28 @@ export async function fetchBills() {
             return [];
         }
 
-        // Transform to match expected format
-        return (bills || []).map(bill => ({
-            id: bill.external_id,
-            boletin: bill.boletin,
-            titulo: bill.titulo,
-            estado: bill.estado,
-            camaraOrigen: bill.camara_origen === 'senado' ? 'Senado' : 'Cámara de Diputados',
-            urgencia: bill.urgencia,
-            fechaIngreso: new Date(bill.fecha_ingreso),
-            fechaUltimaModificacion: new Date(bill.fecha_ultima_modificacion),
-            etapaActual: bill.etapa_actual,
-            iniciativa: bill.iniciativa === 'ejecutivo' ? 'Ejecutivo' : 'Parlamentaria',
-        }));
+        return (bills || []).map(bill => {
+            // Normalize status from raw DB values
+            let normalizedStatus = bill.estado;
+            const statusLower = (bill.estado || '').toLowerCase();
+
+            if (statusLower.includes('tramit') || statusLower.includes('ingreso')) normalizedStatus = 'en_tramite';
+            else if (statusLower.includes('aprob') || statusLower.includes('promulga')) normalizedStatus = 'aprobado';
+            else if (statusLower.includes('archiv') || statusLower.includes('retira') || statusLower.includes('rechaza')) normalizedStatus = 'rechazado';
+
+            return {
+                id: bill.id,
+                bulletin_number: bill.bulletin_number,
+                title: bill.title,
+                status: normalizedStatus, // Use normalized status
+                current_stage: bill.current_stage || 'Ingreso',
+                urgency: bill.urgency,
+                entry_date: bill.entry_date,
+                chamber_origin: bill.camara_origen === 'senado' ? 'Senado' : 'Cámara',
+                initiative_type: bill.initiative_type || 'Parlamentaria',
+                bill_authors: bill.bill_authors || []
+            };
+        });
     } catch (error) {
         console.error('Error fetching bills:', error);
         return [];
@@ -129,6 +152,56 @@ export async function fetchParlamentarios() {
         return parlamentarios || [];
     } catch (error) {
         console.error('Error fetching parliamentarians:', error);
+        return [];
+    }
+}
+
+/**
+ * Fetch legislative votes from Supabase
+ */
+export async function fetchVotes(year?: number) {
+    try {
+        let query = supabase
+            .from('legislative_votes')
+            .select(`
+                *,
+                bills (
+                    title,
+                    boletin
+                )
+            `);
+
+        if (year) {
+            const startDate = `${year}-01-01`;
+            const endDate = `${year}-12-31`;
+            query = query.gte('vote_date', startDate).lte('vote_date', endDate);
+        }
+
+        const { data: votes, error } = await query
+            .order('vote_date', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            console.error('Error fetching votes:', error);
+            return [];
+        }
+
+        return (votes || []).map(v => ({
+            id: v.id,
+            external_id: v.external_id,
+            date: v.vote_date,
+            description: v.description,
+            result: v.result,
+            yes_count: v.yes_count,
+            no_count: v.no_count,
+            abstention_count: v.abstention_count,
+            absent_count: v.absent_count,
+            quorum: v.quorum_type,
+            bill_title: v.bills?.title,
+            boletin: v.bills?.boletin
+        }));
+    } catch (error) {
+        console.error('Error fetching votes:', error);
         return [];
     }
 }

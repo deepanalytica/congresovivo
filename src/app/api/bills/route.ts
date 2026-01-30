@@ -20,27 +20,16 @@ export async function GET(request: Request) {
 
         let query = supabase
             .from('bills')
-            .select(`
-                *,
-                bill_authors (
-                    id,
-                    parliamentarian:parliamentarians (
-                        id,
-                        nombre_completo,
-                        partido,
-                        camara
-                    )
-                )
-            `, { count: 'exact' })
-            .order('entry_date', { ascending: false })
+            .select('*', { count: 'exact' })
+            .order('fecha_ingreso', { ascending: false })
             .range(offset, offset + limit - 1);
 
         if (status) {
-            query = query.eq('status', status);
+            query = query.eq('estado', status);
         }
 
         if (chamber) {
-            query = query.eq('chamber_origin', chamber);
+            query = query.eq('camara_origen', chamber);
         }
 
         const { data, error, count } = await query;

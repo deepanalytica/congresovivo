@@ -62,6 +62,7 @@ export function getBillStageLabel(stage: LegislativeStage): string {
         tribunal_constitucional: 'Tribunal Constitucional',
         aprobado: colors.legislativeStages.aprobado.label,
         promulgado: colors.legislativeStages.promulgado.label,
+        publicado: 'Publicado',
         rechazado: colors.legislativeStages.rechazado.label,
         archivado: colors.legislativeStages.archivado.label,
     }
