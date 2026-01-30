@@ -105,8 +105,8 @@ export default function HomePage() {
                     <NavIcon href="/proyectos" icon={<FileText />} label="Proyectos" />
                     <NavIcon href="/votos" icon={<Vote />} label="Votos" />
                     <NavIcon href="/parlamentarios" icon={<Users />} label="Parlamentarios" />
-                    <NavIcon href="/mapa" icon={<Map />} label="Mapa" />
                     <NavIcon href="/comisiones" icon={<Calendar />} label="Comisiones" />
+                    <NavIcon href="/mapa" icon={<Map />} label="Mapa" />
                 </nav>
 
                 <div className="flex flex-col gap-4">

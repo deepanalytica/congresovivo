@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Hemicycle } from '@/components/visualizations/Hemicycle';
-import { ArrowLeft, Calendar, Vote, Users, Share2, CheckCircle2, XCircle } from 'lucide-react';
+import { PartyBreakdown } from '@/components/visualizations/PartyBreakdown';
+import { ArrowLeft, Calendar, Users, Share2, CheckCircle2, XCircle, Vote as VoteIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -106,76 +107,69 @@ export default function VoteDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
 
                     {/* Left: Hemicycle Visualization */}
-                    <div className="lg:col-span-3 bg-slate-900/50 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/10 via-transparent to-transparent pointer-events-none" />
+                    <div className="lg:col-span-3 bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-8 flex flex-col items-center justify-center min-h-[600px] relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-500/10 via-transparent to-transparent pointer-events-none opacity-50 group-hover:opacity-80 transition-opacity duration-700" />
 
-                        <h2 className="text-xl font-bold mb-8 text-slate-300 flex items-center gap-2 z-10">
-                            <Users className="w-5 h-5 text-cyan-400" />
-                            Distribución de Votos
-                        </h2>
-
-                        <div className="w-full overflow-x-auto flex justify-center z-10">
-                            <Hemicycle votes={hemicycleData} width={800} height={400} />
+                        <div className="w-full flex justify-between items-center mb-12 z-10 px-4">
+                            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                                <Users className="w-6 h-6 text-cyan-400" />
+                                Hemaciclo de Votación
+                            </h2>
+                            <div className="flex items-center gap-2 text-xs font-mono text-slate-500 bg-slate-950/50 px-3 py-1.5 rounded-full border border-white/5">
+                                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                                {hemicycleData.length} Parlamentarios
+                            </div>
                         </div>
 
-                        {/* Legend */}
-                        <div className="flex gap-6 mt-8 z-10">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                                <span className="text-sm text-slate-400">A Favor</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-rose-500" />
-                                <span className="text-sm text-slate-400">En Contra</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                                <span className="text-sm text-slate-400">Abstención</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-slate-600" />
-                                <span className="text-sm text-slate-400">Ausente/Pareo</span>
-                            </div>
+                        <div className="w-full z-10">
+                            <Hemicycle votes={hemicycleData} />
                         </div>
                     </div>
 
-                    {/* Right: Stats & Summary */}
-                    <div className="space-y-6">
-                        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-                            <h3 className="font-bold text-slate-200 mb-4">Resumen</h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                                    <span className="text-emerald-500 font-medium">A Favor</span>
-                                    <span className="text-2xl font-bold text-white">{vote.a_favor}</span>
+                    {/* Right Side: Stats & Party Breakdown */}
+                    <div className="space-y-8">
+                        {/* Summary Card */}
+                        <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-2xl">
+                            <h3 className="font-bold text-white mb-6 flex items-center gap-2">
+                                <VoteIcon className="w-5 h-5 text-cyan-400" />
+                                Resultado Total
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-center">
+                                    <span className="block text-[10px] font-black uppercase text-emerald-500 tracking-tighter mb-1">A Favor</span>
+                                    <span className="text-3xl font-black text-white">{vote.a_favor}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-rose-500/10 rounded-lg border border-rose-500/20">
-                                    <span className="text-rose-500 font-medium">En Contra</span>
-                                    <span className="text-2xl font-bold text-white">{vote.contra}</span>
+                                <div className="p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20 text-center">
+                                    <span className="block text-[10px] font-black uppercase text-rose-500 tracking-tighter mb-1">En Contra</span>
+                                    <span className="text-3xl font-black text-white">{vote.contra}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                                    <span className="text-yellow-500 font-medium">Abstención</span>
-                                    <span className="text-2xl font-bold text-white">{vote.abstenciones}</span>
+                                <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-center">
+                                    <span className="block text-[10px] font-black uppercase text-yellow-500 tracking-tighter mb-1">Abstención</span>
+                                    <span className="text-3xl font-black text-white">{vote.abstenciones}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-slate-700/10 rounded-lg border border-slate-700/20">
-                                    <span className="text-slate-400 font-medium">Ausentes</span>
-                                    <span className="text-2xl font-bold text-white">{vote.ausentes + (vote.pareos || 0)}</span>
+                                <div className="p-4 bg-slate-800/20 rounded-2xl border border-white/5 text-center">
+                                    <span className="block text-[10px] font-black uppercase text-slate-500 tracking-tighter mb-1">Ausentes</span>
+                                    <span className="text-3xl font-black text-white">{vote.ausentes + (vote.pareos || 0)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Mini metadata card */}
-                        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-sm text-slate-400 space-y-3">
-                            <div className="flex justify-between">
-                                <span>Cámara:</span>
-                                <span className="text-white capitalize">{vote.camara}</span>
+                        {/* Party Breakdown Analytics */}
+                        <PartyBreakdown votes={hemicycleData} />
+
+                        {/* Metadata Details */}
+                        <div className="bg-slate-950/40 border border-white/5 rounded-3xl p-6 text-sm text-slate-400 space-y-4">
+                            <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                                <span className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Cámara</span>
+                                <span className="text-white font-bold capitalize">{vote.camara}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span>Quorum:</span>
-                                <span className="text-white">{vote.quorum || 'N/A'}</span>
+                            <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                                <span className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Quorum</span>
+                                <span className="text-white font-bold">{vote.quorum || 'Mayoría Simple'}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span>ID Votación:</span>
-                                <span className="font-mono text-xs">{vote.external_id}</span>
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Sesión</span>
+                                <span className="text-white font-mono">{vote.sesion || 'Ordinaria'}</span>
                             </div>
                         </div>
                     </div>
