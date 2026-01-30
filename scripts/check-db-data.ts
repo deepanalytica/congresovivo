@@ -56,7 +56,10 @@ async function check() {
     if (billsErrorAnon) console.error('❌ Anon Bills Error:', billsErrorAnon.message);
     else console.log(`⚠️ Bills visible to Public (Anon): ${billsCountAnon}`);
 
-    if (billsCount > 0 && billsCountAnon === 0) {
+    const count = billsCount ?? 0;
+    const countAnon = billsCountAnon ?? 0;
+
+    if (count > 0 && countAnon === 0) {
         console.error('🚨 RLS ISSUE DETECTED: Data exists but is hidden from public!');
     } else {
         console.log('✅ RLS seems okay (or table is empty)');
